@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ProjectR.MainWindow"
+        Width="700"
+        Height="450"
+        Title="UR Robot - Connect &amp; Send">
+
+
+    <StackPanel Margin="16" Spacing="10">
+
+        <TextBlock FontSize="18" Text="UR Robot - Simple Connect &amp; Send" />
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock VerticalAlignment="Center" Text="Robot IP:" />
+            <TextBox x:Name="IpAddress" Width="220" Text="172.20.254.207" />
+
+            <Button Click="ConnectButton_OnClick">Connect</Button>
+            <Button Click="SendScriptButton_OnClick">Send robot.script</Button>
+        </StackPanel>
+
+        <TextBlock Text="Status:" FontWeight="Bold"/>
+
+        <TextBox x:Name="StatusMessages"
+                 Height="300"
+                 AcceptsReturn="True"
+                 IsReadOnly="True"
+                 TextWrapping="Wrap"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+    </StackPanel>
+</Window>

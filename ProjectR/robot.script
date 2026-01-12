@@ -1,0 +1,81 @@
+def group5_minimal():
+
+  # --- OnRobot RG2 (kræver OnRobot URCap / Compute Box server) ---
+  rg = rpc_factory("xmlrpc", "http://172.20.254.102:41414")
+
+  # (valgfrit men ofte nødvendigt for OnRobot)
+  set_tool_voltage(24)
+  set_tool_communication(True, 1000000, 2, 1, 1.5, 3.5)
+
+  # --- Poses fra dit program ---
+  p_home_p          = p[-0.130588180302, -0.295899334319,  0.471525063587, 2.538953616766, 0.006610044824, 0.001324343615]
+  p_home_q          = [-1.5685136953936976, -1.5705312532121134, -0.09931756556034088, -1.9143811664977015, 1.576417088508606, 3.135735511779785]
+
+  p_over_pick_p     = p[ 0.340451962787, -0.433334865424, -0.017477824898, 2.218850096475, 2.149616197780, 0.075468055928]
+  p_over_pick_q     = [-0.7867682615863245, -2.4849330387511195, -0.901721715927124, -0.866143063907959, 1.9705028533935547, 2.4793202877044678]
+
+  p_pick_p          = p[ 0.340451962729, -0.433334865365, -0.115639468792, 2.218850096475, 2.149616197780, 0.075468055930]
+
+  neutral_with_p_p  = p[-0.194112231780, -0.451412953179,  0.110827435999,-2.971844879723,-0.028013664448,-0.117391377372]
+  neutral_with_p_q  = [-1.7681956516486892, -2.5663039839701978, -8.041385700785497E-4, -1.8080839958492607, 1.7210650940017205, 2.9683104640617977]
+
+  p_place_ok_p      = p[-0.428521823592, -0.419932064625, -0.120354035386, 3.084010627163,-0.036564777529, 0.038501157837]
+
+  p_over_place_ok_p = p[-0.436359418476, -0.420016789619,  0.021572870218, 3.031726245523,-0.048632762494,-0.028622897086]
+  p_over_place_ok_q = [-2.2620652357684534, -2.8699618778624476, 0.01792031923402959, -1.3246549677899857, 1.9353885650634766, 2.576785087585449]
+
+  # --- Simple parametre ---
+  aJ = 1.3962634016
+  vJ = 1.0471975512
+  aL = 1.2
+  vL = 0.25
+
+  # --- Griber helper (super simpelt) ---
+  def rg_grip_simple(width, force):
+    # tool_index = 0
+    rg.rg_grip(0, width, force)
+  end
+
+  while True:
+
+    # Home
+    movej(get_inverse_kin(p_home_p, qnear=p_home_q), a=aJ, v=vJ)
+
+    # Åben griber (din første: 36.1)
+    rg_grip_simple(36.1, 40.0)
+
+    # DO7 ON -> vent på DI4 = HI -> DO7 OFF
+    set_standard_digital_out(7, True)
+    while (get_standard_digital_in(4) == False):
+      sync()
+    end
+    set_standard_digital_out(7, False)
+
+    # Gå til pick
+    movej(get_inverse_kin(p_over_pick_p, qnear=p_over_pick_q), a=aJ, v=vJ)
+    movel(p_pick_p, a=aL, v=vL)
+
+    # Luk griber (din: 16.7)
+    rg_grip_simple(16.7, 40.0)
+    sleep(0.2)
+
+    # Neutral + place OK
+    movej(get_inverse_kin(neutral_with_p_p, qnear=neutral_with_p_q), a=aJ, v=vJ)
+    movel(p_place_ok_p, a=aL, v=vL)
+
+    # Slip (din: 55.2 / 21)
+    rg_grip_simple(55.2, 21.0)
+    sleep(0.2)
+
+    # Vent DI4 = LO
+    while (get_standard_digital_in(4) == True):
+      sync()
+    end
+
+    # Over place OK
+    movej(get_inverse_kin(p_over_place_ok_p, qnear=p_over_place_ok_q), a=aJ, v=vJ)
+
+  end
+end
+
+group5_minimal()
