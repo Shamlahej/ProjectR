@@ -1,96 +1,41 @@
-using System;
-using System.IO;
-using System.Linq;                 // <-- VIGTIG (Any/Single/FirstOrDefault)
-using System.Security.Cryptography;
-using System.Text;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
-namespace ProjectR.Data;
+namespace ProjectR.data;
 
-public static class DbService
+public class DbService
 {
-    public static void Init()
-    {
-        using var db = new AppDbContext();
-        db.Database.EnsureCreated();
+    private readonly AppDbContext _db;
 
-        if (!db.Counters.Any(c => c.Id == 1))
+    public DbService(AppDbContext db)
+    {
+        _db = db;
+    }
+
+    public async Task<bool> EnsureCreatedAndSeedAsync()
+    {
+        var created = await _db.Database.EnsureCreatedAsync();
+
+        // Sørg for counter-rækken findes
+        var counter = await _db.Counters.FirstOrDefaultAsync(c => c.Id == 1);
+        if (counter == null)
         {
-            db.Counters.Add(new Counter { Id = 1 });
-            db.SaveChanges();
+            _db.Counters.Add(new Counter { Id = 1 });
+            await _db.SaveChangesAsync();
         }
+
+        return created;
     }
 
-    public static void EnsureComponentType(string name, string? description = null)
+    public async Task IncrementSortedAsync(bool isOk)
     {
-        using var db = new AppDbContext();
-        if (!db.ComponentTypes.Any(x => x.Name == name))
-        {
-            db.ComponentTypes.Add(new ComponentType { Name = name, Description = description });
-            db.SaveChanges();
-        }
+        var c = await _db.Counters.FirstAsync(x => x.Id == 1);
+        c.ItemsSortedTotal += 1;
+        if (isOk) c.ItemsOkTotal += 1;
+        else c.ItemsRejectedTotal += 1;
+        await _db.SaveChangesAsync();
     }
 
-    public static void LogSorting(int componentTypeId, bool isOk, int? userId = null)
-    {
-        using var db = new AppDbContext();
-
-        db.SortingEvents.Add(new SortingEvent
-        {
-            ComponentTypeId = componentTypeId,
-            IsOk = isOk,
-            UserId = userId
-        });
-
-        var counter = db.Counters.Single(c => c.Id == 1);
-        counter.ItemsSortedTotal += 1;
-        if (isOk) counter.ItemsOkTotal += 1;
-        else counter.ItemsRejectedTotal += 1;
-
-        db.SaveChanges();
-    }
-
-    public static long GetItemsSortedTotal()
-    {
-        using var db = new AppDbContext();
-        return db.Counters.Single(c => c.Id == 1).ItemsSortedTotal;
-    }
-
-    public static int RegisterUser(string username, string password)
-    {
-        using var db = new AppDbContext();
-
-        if (db.Users.Any(u => u.Username == username))
-            throw new Exception("Brugernavn findes allerede.");
-
-        var user = new User
-        {
-            Username = username,
-            PasswordHash = Hash(password)
-        };
-
-        db.Users.Add(user);
-        db.SaveChanges();
-        return user.Id;
-    }
-
-    public static int? Login(string username, string password)
-    {
-        using var db = new AppDbContext();
-        var hash = Hash(password);
-        var user = db.Users.FirstOrDefault(u => u.Username == username && u.PasswordHash == hash);
-        return user?.Id;
-    }
-
-    private static string Hash(string input)
-    {
-        using var sha = SHA256.Create();
-        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
-
-        // kompatibel med alle .NET versioner:
-        var sb = new StringBuilder(bytes.Length * 2);
-        foreach (var b in bytes)
-            sb.Append(b.ToString("x2"));
-        return sb.ToString();
-    }
+    public Task<Counter> GetCounterAsync()
+        => _db.Counters.FirstAsync(x => x.Id == 1);
 }
-

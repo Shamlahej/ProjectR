@@ -1,31 +1,29 @@
+using System;
+using System.IO;
 using Microsoft.EntityFrameworkCore;
 
-namespace ProjectR.Data;
+namespace ProjectR.data;
 
 public class AppDbContext : DbContext
 {
-    public DbSet<User> Users => Set<User>();
-    public DbSet<ComponentType> ComponentTypes => Set<ComponentType>();
-    public DbSet<SortingEvent> SortingEvents => Set<SortingEvent>();
+    public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Counter> Counters => Set<Counter>();
+
+    private readonly string _dbPath;
+
+    public AppDbContext()
+    {
+        // Stabil DB-sti (crasher ikke pga working directory)
+        var dir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ProjectR"
+        );
+        Directory.CreateDirectory(dir);
+        _dbPath = Path.Combine(dir, "database.sqlite");
+    }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        // Lægger databasen i din projektmappe (så du kan se den i Rider)
-        optionsBuilder.UseSqlite("Data Source=../../../../app.sqlite");
-    }
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        // Seed: vi sikrer at der findes en Counter række med Id=1
-        modelBuilder.Entity<Counter>().HasData(new Counter
-        {
-            Id = 1,
-            ItemsSortedTotal = 0,
-            ItemsOkTotal = 0,
-            ItemsRejectedTotal = 0
-        });
-
-        base.OnModelCreating(modelBuilder);
+        optionsBuilder.UseSqlite($"Data Source={_dbPath}");
     }
 }

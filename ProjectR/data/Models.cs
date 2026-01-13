@@ -1,65 +1,101 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
-namespace ProjectR.Data;
+namespace ProjectR.data;
 
-// 1) Brugere
-public class User
+// -------------------- SERVICES --------------------
+
+public class AccountService
 {
-    [Key]
-    public int Id { get; set; }
+    private readonly AppDbContext _db;
+    private readonly PasswordHasher _hasher;
 
-    [Required]
-    public string Username { get; set; } = "";
+    public AccountService(AppDbContext db, PasswordHasher hasher)
+    {
+        _db = db;
+        _hasher = hasher;
+    }
 
-    // super simpelt login (til skoleprojekt ok)
-    // I rigtig verden: hash + salt
-    [Required]
-    public string PasswordHash { get; set; } = "";
+    public async Task NewAccountAsync(string username, string password, bool isAdmin = false)
+    {
+        var (salt, saltedPasswordHash) = _hasher.Hash(password);
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        _db.Add(new Account
+        {
+            Username = username,
+            Salt = salt,
+            SaltedPasswordHash = saltedPasswordHash,
+            IsAdmin = isAdmin
+        });
 
-    public List<SortingEvent> SortingEvents { get; set; } = new();
+        await _db.SaveChangesAsync();
+    }
+
+    public Task<bool> UsernameExistsAsync(string username)
+        => _db.Accounts.AnyAsync(a => a.Username == username);
+
+    public async Task<bool> CredentialsCorrectAsync(string username, string password)
+    {
+        var account = await _db.Accounts.FirstAsync(a => a.Username == username);
+        return _hasher.PasswordCorrect(password, account.Salt, account.SaltedPasswordHash);
+    }
+
+    public Task<Account> GetAccountAsync(string username)
+        => _db.Accounts.FirstAsync(a => a.Username == username);
 }
 
-// 2) Typer af komponenter (M3 screw, pen, osv.)
-public class ComponentType
+public class PasswordHasher
 {
-    [Key]
-    public int Id { get; set; }
+    private readonly int _saltLength;
+    private readonly int _hashIterations;
 
-    [Required]
-    public string Name { get; set; } = "";  // fx "M3 screw"
+    public PasswordHasher(int saltLength = 128 / 8, int hashIterations = 600_000)
+    {
+        _saltLength = saltLength;
+        _hashIterations = hashIterations;
+    }
 
-    public string? Description { get; set; }
+    public bool PasswordCorrect(string password, byte[] salt, byte[] saltedPasswordHash)
+    {
+        var hash = Hash(salt, password);
+        return CryptographicOperations.FixedTimeEquals(hash, saltedPasswordHash);
+    }
+
+    private byte[] Hash(byte[] salt, string password)
+    {
+        return Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt,
+            _hashIterations,
+            HashAlgorithmName.SHA256,
+            256 / 8
+        );
+    }
+
+    public (byte[] Salt, byte[] Hash) Hash(string password)
+    {
+        var salt = RandomNumberGenerator.GetBytes(_saltLength);
+        return (salt, Hash(salt, password));
+    }
 }
 
-// 3) Et “sorterings-event” hver gang robotten sorterer en ting
-public class SortingEvent
+// -------------------- ENTITIES --------------------
+
+public class Account
 {
-    [Key]
-    public long Id { get; set; }
+    [Key] public string Username { get; set; } = "";
 
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-
-    // hvem gjorde det
-    public int? UserId { get; set; }
-    public User? User { get; set; }
-
-    // hvad blev sorteret
-    public int ComponentTypeId { get; set; }
-    public ComponentType? ComponentType { get; set; }
-
-    // blev den godkendt eller sendt til fejl-boks?
-    public bool IsOk { get; set; }
+    public byte[] Salt { get; set; } = [];
+    public byte[] SaltedPasswordHash { get; set; } = [];
+    public bool IsAdmin { get; set; }
 }
 
-// 4) Counter (kun én række) - her ligger "hvor mange items sorteret"
 public class Counter
 {
-    [Key]
-    public int Id { get; set; } = 1;   // vi bruger altid ID=1
+    // Vi har kun én række: Id=1
+    [Key] public int Id { get; set; } = 1;
 
     public long ItemsSortedTotal { get; set; }
     public long ItemsOkTotal { get; set; }
