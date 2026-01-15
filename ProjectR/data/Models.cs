@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -100,4 +101,17 @@ public class Counter
     public long ItemsSortedTotal { get; set; }
     public long ItemsOkTotal { get; set; }
     public long ItemsRejectedTotal { get; set; }
+}
+
+// Gem “robotten sorterede X” for hver gang man stopper
+public class SortingRun
+{
+    [Key] public int Id { get; set; }
+
+    public DateTime EndedAt { get; set; } = DateTime.UtcNow;
+
+    public int ItemsCounted { get; set; }
+
+    // Optional: hvem kørte den (kan stå tom)
+    public string? Username { get; set; }
 }

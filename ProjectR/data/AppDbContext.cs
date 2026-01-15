@@ -8,12 +8,12 @@ public class AppDbContext : DbContext
 {
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Counter> Counters => Set<Counter>();
+    public DbSet<SortingRun> SortingRuns => Set<SortingRun>();
 
     private readonly string _dbPath;
 
     public AppDbContext()
     {
-        // Stabil DB-sti (crasher ikke pga working directory)
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "ProjectR"

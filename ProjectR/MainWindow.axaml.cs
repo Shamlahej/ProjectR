@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using ProjectR.data;
 
 namespace ProjectR;
@@ -32,7 +33,7 @@ public partial class MainWindow : Window
     // IP/connect
     private TextBox _ipBox = null!;
 
-    // --- Robot GUI controls (dit design) ---
+    // Robot GUI
     private Button _startButton = null!;
     private Button _stopButton = null!;
     private Button _resetButton = null!;
@@ -51,7 +52,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         WireControls();
 
-        // Hide tabs until login
         foreach (var item in _tabControl.Items)
             if (item is TabItem t) t.IsVisible = false;
 
@@ -59,7 +59,6 @@ public partial class MainWindow : Window
         _loginTab.IsSelected = true;
 
         InitServices();
-
         Loaded += async (_, __) => await SafeInitDbAsync();
     }
 
@@ -83,7 +82,6 @@ public partial class MainWindow : Window
         _createPass = this.FindControl<TextBox>("CreateUserPassword")!;
         _createIsAdmin = this.FindControl<CheckBox>("CreateUserIsAdmin")!;
 
-        // Robot GUI (dit design)
         _startButton = this.FindControl<Button>("StartButton")!;
         _stopButton = this.FindControl<Button>("StopButton")!;
         _resetButton = this.FindControl<Button>("ResetButton")!;
@@ -205,10 +203,7 @@ public partial class MainWindow : Window
         Log("Logged out.");
     }
 
-    public void ClearLogButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        _logOutput.Text = "";
-    }
+    public void ClearLogButton_OnClick(object? sender, RoutedEventArgs e) => _logOutput.Text = "";
 
     // ---------------- USERS (ADMIN) ----------------
 
@@ -258,7 +253,7 @@ public partial class MainWindow : Window
         {
             var c = await _dbService.GetCounterAsync();
             Log($"Counter: Sorted={c.ItemsSortedTotal}, OK={c.ItemsOkTotal}, Reject={c.ItemsRejectedTotal}");
-            _correctCounterBox.Text = c.ItemsOkTotal.ToString();
+            _correctCounterBox.Text = c.ItemsSortedTotal.ToString();
         }
         catch (Exception ex)
         {
@@ -266,7 +261,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // ---------------- ROBOT CONNECT/SEND ----------------
+    // ---------------- ROBOT CONNECT ----------------
 
     public async void ConnectButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -281,10 +276,27 @@ public partial class MainWindow : Window
             }
 
             _robot = new Robot(ip);
+
+            // Start listener FØR script’et kører (robotten forbinder til din app)
+            _robot.StartEventListener(5005);
+
+            _robot.RobotEventReceived += (msg) =>
+            {
+                Dispatcher.UIThread.Post(async () =>
+                {
+                    RobotUiLog("EVENT: " + msg);
+
+                    if (msg == "COUNT")
+                    {
+                        await IncrementSortedTotalAsync();
+                    }
+                });
+            };
+
             await _robot.ConnectAsync();
 
-            Log($"Connected to {ip} (30002).");
-            RobotUiLog($"Connected to {ip} (30002).");
+            Log($"Connected to {ip} (30002). Listening on 5005.");
+            RobotUiLog($"Connected to {ip} (30002). Listening on 5005.");
         }
         catch (Exception ex)
         {
@@ -293,69 +305,67 @@ public partial class MainWindow : Window
         }
     }
 
-    public void SendScriptButton_OnClick(object? sender, RoutedEventArgs e)
+    // Send robot.script (bruges af Start Sorting)
+    private bool SendRobotScriptInternal()
     {
-        try
+        if (_robot == null || !_robot.Connected)
         {
-            if (_robot == null || !_robot.Connected)
-            {
-                Log("Tryk Connect først.");
-                RobotUiLog("Tryk Connect først.");
-                return;
-            }
-
-            var candidates = new[]
-            {
-                Path.Combine(AppContext.BaseDirectory, "robot.script"),
-                Path.Combine(Directory.GetCurrentDirectory(), "robot.script"),
-                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "robot.script"),
-            };
-
-            string? scriptPath = null;
-
-            foreach (var p in candidates)
-            {
-                var full = Path.GetFullPath(p);
-                if (File.Exists(full))
-                {
-                    scriptPath = full;
-                    break;
-                }
-            }
-
-            if (scriptPath == null)
-            {
-                Log("Fandt ikke robot.script. Læg den i samme mappe som ProjectR.csproj.");
-                RobotUiLog("Fandt ikke robot.script. Læg den i samme mappe som ProjectR.csproj.");
-                return;
-            }
-
-            _robot.SendUrscriptFile(scriptPath);
-            Log("robot.script sendt fra: " + scriptPath);
-            RobotUiLog("robot.script sendt fra: " + scriptPath);
+            Log("Tryk Connect først.");
+            RobotUiLog("Tryk Connect først.");
+            return false;
         }
-        catch (Exception ex)
+
+        var candidates = new[]
         {
-            Log("Send error: " + ex.Message);
-            RobotUiLog("Send error: " + ex.Message);
+            Path.Combine(AppContext.BaseDirectory, "robot.script"),
+            Path.Combine(Directory.GetCurrentDirectory(), "robot.script"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "robot.script"),
+        };
+
+        string? scriptPath = null;
+
+        foreach (var p in candidates)
+        {
+            var full = Path.GetFullPath(p);
+            if (File.Exists(full))
+            {
+                scriptPath = full;
+                break;
+            }
         }
+
+        if (scriptPath == null)
+        {
+            Log("Fandt ikke robot.script. Læg den i samme mappe som ProjectR.csproj.");
+            RobotUiLog("Fandt ikke robot.script. Læg den i samme mappe som ProjectR.csproj.");
+            return false;
+        }
+
+        _robot.SendUrscriptFile(scriptPath);
+        Log("robot.script sendt fra: " + scriptPath);
+        RobotUiLog("robot.script sendt fra: " + scriptPath);
+        return true;
     }
 
-    // ---------------- ROBOT GUI (DIT DESIGN) ----------------
+    // ---------------- ROBOT GUI ----------------
 
     public async void StartButton_OnClick(object? sender, RoutedEventArgs e)
     {
         try
         {
+            if (!SendRobotScriptInternal())
+                return;
+
+            await RefreshRobotCounterBoxAsync();
+
             _sortingRunning = true;
             _startButton.IsEnabled = false;
             _stopButton.IsEnabled = true;
 
             _statusText.Text = "Running";
             _statusHintText.Text = "Sorting in progress...";
-            RobotUiLog("Started sorting.");
+            RobotUiLog("Started sorting (script sent).");
 
-            // her kan du starte din rigtige sekvens/loop senere
             await Task.Delay(150);
         }
         catch (Exception ex)
@@ -422,26 +432,19 @@ public partial class MainWindow : Window
         RobotUiLog(_conveyorRunning ? "Conveyor started." : "Conveyor stopped.");
     }
 
-    // Kald de her når din robotlogik ved OK/Reject:
-    private async Task IncrementOkAsync()
+    // ---- COUNTER: TOTAL SORTED ----
+    private async Task IncrementSortedTotalAsync()
     {
-        await _dbService.IncrementSortedAsync(true);
-        await RefreshRobotCounterBoxAsync();
-        RobotUiLog("Item OK registered.");
-    }
+        var c = await _dbService.GetCounterAsync();
+        c.ItemsSortedTotal += 1;
+        await _db.SaveChangesAsync();
 
-    private async Task IncrementRejectAsync()
-    {
-        await _dbService.IncrementSortedAsync(false);
-        await RefreshRobotCounterBoxAsync();
-        RobotUiLog("Item REJECT registered.");
+        _correctCounterBox.Text = c.ItemsSortedTotal.ToString();
     }
 
     private async Task RefreshRobotCounterBoxAsync()
     {
         var c = await _dbService.GetCounterAsync();
-        _correctCounterBox.Text = c.ItemsOkTotal.ToString();
+        _correctCounterBox.Text = c.ItemsSortedTotal.ToString();
     }
 }
-
-

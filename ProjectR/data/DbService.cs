@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,7 @@ public class DbService
     {
         var created = await _db.Database.EnsureCreatedAsync();
 
-        // Sørg for counter-rækken findes
+        // Counter-rækken
         var counter = await _db.Counters.FirstOrDefaultAsync(c => c.Id == 1);
         if (counter == null)
         {
@@ -27,6 +28,7 @@ public class DbService
         return created;
     }
 
+    // Totals (hvis du stadig vil bruge dem)
     public async Task IncrementSortedAsync(bool isOk)
     {
         var c = await _db.Counters.FirstAsync(x => x.Id == 1);
@@ -38,4 +40,16 @@ public class DbService
 
     public Task<Counter> GetCounterAsync()
         => _db.Counters.FirstAsync(x => x.Id == 1);
+
+    // Gem “robotten sorterede X”
+    public async Task SaveRunAsync(int itemsCounted, string? username)
+    {
+        _db.SortingRuns.Add(new SortingRun
+        {
+            EndedAt = DateTime.UtcNow,
+            ItemsCounted = itemsCounted,
+            Username = username
+        });
+        await _db.SaveChangesAsync();
+    }
 }

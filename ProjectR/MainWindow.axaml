@@ -5,10 +5,8 @@
         Height="680"
         Title="ProjectR - Sorting Robot Arm">
 <Window.Styles>
-  <!-- ==== FARVER (lokalt i MainWindow) ==== -->
   <Style>
     <Style.Resources>
-      <!-- Backgrounds -->
       <SolidColorBrush x:Key="Bg" Color="#0F172A"/>
       <SolidColorBrush x:Key="Card" Color="#111C34"/>
       <SolidColorBrush x:Key="Card2" Color="#0B1224"/>
@@ -16,7 +14,6 @@
       <SolidColorBrush x:Key="Text" Color="#E5E7EB"/>
       <SolidColorBrush x:Key="Muted" Color="#94A3B8"/>
 
-      <!-- Buttons -->
       <SolidColorBrush x:Key="Btn" Color="#1F2A44"/>
       <SolidColorBrush x:Key="BtnHover" Color="#24314F"/>
       <SolidColorBrush x:Key="Danger" Color="#DC2626"/>
@@ -24,12 +21,10 @@
     </Style.Resources>
   </Style>
 
-  <!-- Standard tekst -->
   <Style Selector="TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource Text}"/>
   </Style>
 
-  <!-- Standard TextBox -->
   <Style Selector="TextBox">
     <Setter Property="Background" Value="{DynamicResource Card2}"/>
     <Setter Property="Foreground" Value="{DynamicResource Text}"/>
@@ -39,7 +34,6 @@
     <Setter Property="Padding" Value="10,8"/>
   </Style>
 
-  <!-- Standard Button -->
   <Style Selector="Button">
     <Setter Property="Background" Value="{DynamicResource Btn}"/>
     <Setter Property="Foreground" Value="{DynamicResource Text}"/>
@@ -52,7 +46,6 @@
     <Setter Property="Background" Value="{DynamicResource BtnHover}"/>
   </Style>
 
-  <!-- Baggrund/kort via Name selectors -->
   <Style Selector="Border#RootBackground">
     <Setter Property="Background" Value="{DynamicResource Bg}"/>
   </Style>
@@ -93,7 +86,6 @@
     <Setter Property="BorderThickness" Value="1"/>
   </Style>
 
-  <!-- Emergency knap -->
   <Style Selector="Button#EmergencyButton">
     <Setter Property="Background" Value="{DynamicResource Danger}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource DangerHover}"/>
@@ -102,7 +94,6 @@
     <Setter Property="Background" Value="{DynamicResource DangerHover}"/>
   </Style>
 
-  <!-- Hint tekster -->
   <Style Selector="TextBlock#StatusHintText">
     <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
   </Style>
@@ -113,10 +104,8 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
 
-        <!-- TABS -->
         <TabControl Name="TabControl" Grid.Row="0">
 
-            <!-- LOGIN -->
             <TabItem Header="🔑 Login" Name="LoginTab">
                 <StackPanel Margin="12" Spacing="8">
                     <TextBox Name="LoginUsername" Watermark="username" Text="admin"/>
@@ -125,7 +114,6 @@
                 </StackPanel>
             </TabItem>
 
-            <!-- ROBOT (DIT DESIGN + plads til IP/Connect øverst) -->
             <TabItem Header="🦾 Robot" Name="RobotTab">
 
                 <Border Name="RootBackground">
@@ -137,7 +125,6 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- HEADER -->
                         <StackPanel Grid.Row="0" Spacing="6" HorizontalAlignment="Center">
                             <TextBlock Text="Sorting Robot Arm"
                                        FontSize="28"
@@ -147,7 +134,6 @@
                                        Opacity="0.7"/>
                         </StackPanel>
 
-                        <!-- TOPBAR: IP + CONNECT + SEND -->
                         <Border Grid.Row="1"
                                 Name="TopBarCard"
                                 Margin="0,18,0,0"
@@ -162,16 +148,9 @@
                                         Height="38"
                                         CornerRadius="8"
                                         Content="Connect"/>
-
-                                <Button Click="SendScriptButton_OnClick"
-                                        Width="170"
-                                        Height="38"
-                                        CornerRadius="8"
-                                        Content="Send robot.script"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- MAIN -->
                         <Border Grid.Row="2"
                                 Name="MainCard"
                                 Margin="0,20,0,0"
@@ -183,7 +162,6 @@
                                   ColumnSpacing="22"
                                   RowSpacing="18">
 
-                                <!-- LEFT: CONTROL -->
                                 <StackPanel Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Spacing="16">
                                     <TextBlock Text="Control"
                                                FontSize="18"
@@ -206,7 +184,6 @@
                                                 Click="StopButton_OnClick"/>
                                     </StackPanel>
 
-                                    <!-- Reset -->
                                     <Button Name="ResetButton"
                                             Content="Reset Counter"
                                             Width="170"
@@ -214,7 +191,6 @@
                                             CornerRadius="8"
                                             Click="ResetButton_OnClick"/>
 
-                                    <!-- Emergency -->
                                     <Border Name="EmergencyPanel"
                                             BorderThickness="1"
                                             CornerRadius="12"
@@ -237,7 +213,6 @@
                                     </Border>
                                 </StackPanel>
 
-                                <!-- RIGHT TOP: COUNTER -->
                                 <Border Name="CountersPanel"
                                         Grid.Row="0" Grid.Column="1"
                                         CornerRadius="12"
@@ -257,7 +232,6 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- RIGHT BOTTOM: STATUS + CONVEYOR -->
                                 <Border Name="StatusPanel"
                                         Grid.Row="1" Grid.Column="1"
                                         CornerRadius="12"
@@ -292,7 +266,6 @@
                             </Grid>
                         </Border>
 
-                        <!-- LOG (din robot-log) -->
                         <Border Grid.Row="3"
                                 Name="BottomCard"
                                 Margin="0,18,0,0"
@@ -316,7 +289,6 @@
 
             </TabItem>
 
-            <!-- USERS -->
             <TabItem Header="👥 Users" Name="UsersTab">
                 <StackPanel Margin="12" Spacing="8">
                     <TextBlock FontWeight="Bold" Text="Create User"/>
@@ -330,7 +302,6 @@
                 </StackPanel>
             </TabItem>
 
-            <!-- DATABASE -->
             <TabItem Header="🛢 Database" Name="DatabaseTab">
                 <StackPanel Margin="12" Spacing="8">
                     <Button Click="RecreateDatabaseButton_OnClick">Recreate database</Button>
@@ -340,7 +311,6 @@
 
         </TabControl>
 
-        <!-- APP LOG (mørk som resten) -->
         <Border Grid.Row="1"
                 Background="{DynamicResource Card}"
                 BorderBrush="{DynamicResource Border}"
@@ -357,7 +327,6 @@
             </ScrollViewer>
 
         </Border>
-
 
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
             <Button Grid.Column="0" Click="ClearLogButton_OnClick">Clear</Button>
