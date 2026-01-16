@@ -522,3 +522,4 @@ public partial class MainWindow : Window
         _correctCounterBox.Text = c.ItemsSortedTotal.ToString();
     }
 }
+---

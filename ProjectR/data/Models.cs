@@ -115,3 +115,4 @@ public class SortingRun
     // Optional: hvem kørte den (kan stå tom)
     public string? Username { get; set; }
 }
+---
