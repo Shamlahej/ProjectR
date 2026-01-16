@@ -255,7 +255,7 @@
                                                    Text="Stopped"
                                                    FontWeight="Bold"/>
                                         <Button Name="ConveyorButton"
-                                                Content="Start Conveyor"
+                                                Content="Stop Conveyor"
                                                 Width="240"
                                                 Height="44"
                                                 CornerRadius="8"
