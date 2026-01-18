@@ -26,3 +26,4 @@ public class AppDbContext : DbContext
         optionsBuilder.UseSqlite($"Data Source={_dbPath}");
     }
 }
+---
