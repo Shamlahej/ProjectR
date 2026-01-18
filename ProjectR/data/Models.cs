@@ -104,4 +104,3 @@ public class SortingRun
 
     public string? Username { get; set; }
 }
----
