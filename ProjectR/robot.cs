@@ -90,9 +90,18 @@ public sealed class Robot
     // --- DIGITAL OUTPUT (til DI-stop-løsning) ---
     public void SetStandardDigitalOut(int index, bool value)
     {
-        // Sender en lille URScript-linje som sætter DO
-        SendUrscript($"set_standard_digital_out({index}, {(value ? "True" : "False")})");
+        var v = value ? "True" : "False";
+
+        // Secondary program: ændrer IO uden at stoppe/overskrive kørende program
+        var program =
+            "sec io_set():\n" +
+            $"  set_standard_digital_out({index}, {v})\n" +
+            "end\n";
+
+        SendUrscript(program);
     }
+
+
 
     // --- HÅRDT STOP (Dashboard) ---
     public void EmergencyStop()
@@ -172,4 +181,3 @@ public sealed class Robot
         }
     }
 }
----

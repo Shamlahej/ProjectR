@@ -50,7 +50,8 @@ public partial class MainWindow : Window
     // --- STOP wiring ---
     // PC sætter DO6 -> (wired) -> robot læser DI6 i script
     private const int StopDoIndex = 6;
-// PC sætter DO5 -> (wired) -> robot læser DI7 (conveyor stop input)
+
+    // PC sætter DO5 -> (wired) -> robot læser DI7 (conveyor stop input)
     private const int ConveyorStopDoIndex = 5;
 
     public MainWindow()
@@ -98,9 +99,8 @@ public partial class MainWindow : Window
         _conveyorStatusText = this.FindControl<TextBlock>("ConveyorStatusText")!;
         _robotLogBox = this.FindControl<TextBox>("LogBox")!;
 
-        // Start med Stop Conveyor tekst (stop-only)
-        _conveyorButton.Content = "Stop Conveyor";
-        _conveyorStatusText.Text = "Stopped";
+        // Start UI korrekt: conveyor er stopped -> knap skal sige "Start Conveyor"
+        SetConveyorUi(false);
     }
 
     private void InitServices()
@@ -307,8 +307,10 @@ public partial class MainWindow : Window
 
             // Sæt StopDo til false ved connect (så du ikke starter i stop-tilstand)
             _robot.SetStandardDigitalOut(StopDoIndex, false);
-            _robot.SetStandardDigitalOut(7, false);
 
+            // Conveyor OFF ved connect + sync UI
+            _robot.SetStandardDigitalOut(7, false);
+            SetConveyorUi(false);
 
             Log($"Connected to {ip}. Dashboard=29999, URScript=30002.");
             RobotUiLog($"Connected to {ip}. Dashboard=29999, URScript=30002.");
@@ -364,6 +366,13 @@ public partial class MainWindow : Window
 
     // ---------------- ROBOT GUI ----------------
 
+    private void SetConveyorUi(bool running)
+    {
+        _conveyorRunning = running;
+        _conveyorStatusText.Text = running ? "Running" : "Stopped";
+        _conveyorButton.Content = running ? "Stop Conveyor" : "Start Conveyor";
+    }
+
     public async void StartButton_OnClick(object? sender, RoutedEventArgs e)
     {
         try
@@ -376,11 +385,15 @@ public partial class MainWindow : Window
 
             // Nulstil stop-flag: DO6 = False
             _robot.SetStandardDigitalOut(StopDoIndex, false);
-// Nulstil conveyor stop-flag: DO5 = False
+
+            // Nulstil conveyor stop-flag: DO5 = False
             _robot.SetStandardDigitalOut(ConveyorStopDoIndex, false);
 
             if (!SendRobotScriptInternal())
                 return;
+
+            // Sorting starter conveyor med det samme -> opdater UI
+            SetConveyorUi(true);
 
             await RefreshRobotCounterBoxAsync();
 
@@ -450,11 +463,11 @@ public partial class MainWindow : Window
     public void EmergencyButton_OnClick(object? sender, RoutedEventArgs e)
     {
         _sortingRunning = false;
-        _conveyorRunning = false;
 
         try
         {
-            // Sæt stop-flags
+            // Stop conveyor + stop-flags
+            _robot?.SetStandardDigitalOut(7, false);
             _robot?.SetStandardDigitalOut(StopDoIndex, true);
             _robot?.SetStandardDigitalOut(ConveyorStopDoIndex, true);
 
@@ -466,14 +479,14 @@ public partial class MainWindow : Window
             RobotUiLog("Emergency error: " + ex.Message);
         }
 
+        // UI skal altid matche: conveyor stoppet
+        SetConveyorUi(false);
 
         _startButton.IsEnabled = true;
         _stopButton.IsEnabled = false;
 
         _statusText.Text = "EMERGENCY STOP";
         _statusHintText.Text = "System halted";
-        _conveyorStatusText.Text = "Stopped";
-        _conveyorButton.Content = "Stop Conveyor";
 
         RobotUiLog("!!! EMERGENCY STOP !!!");
         Log("Emergency stop activated.");
@@ -481,32 +494,32 @@ public partial class MainWindow : Window
 
     public void ConveyorButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        _conveyorRunning = false;
-        _conveyorStatusText.Text = "Stopped";
-        _conveyorButton.Content = "Stop Conveyor";
-
         try
         {
-            if (_robot != null && _robot.Connected)
+            if (_robot == null || !_robot.Connected)
             {
-                // Conveyor = DO7 (ifølge pendanten)
-                _robot.SetStandardDigitalOut(7, false);
-                RobotUiLog("Conveyor stopped (DO7=OFF).");
+                RobotUiLog("Conveyor pressed, but robot not connected.");
+                return;
             }
-            else
-            {
-                RobotUiLog("Conveyor stop pressed, but robot not connected.");
-            }
+
+            // Toggle kun conveyor (DO7) – påvirker ikke robot stop/start
+            var newState = !_conveyorRunning;
+
+            _robot.SetStandardDigitalOut(7, newState);
+            SetConveyorUi(newState);
+
+            RobotUiLog(newState
+                ? "Conveyor started (DO7=ON)."
+                : "Conveyor stopped (DO7=OFF).");
         }
         catch (Exception ex)
         {
-            RobotUiLog("Conveyor stop error: " + ex.Message);
+            RobotUiLog("Conveyor error: " + ex.Message);
         }
     }
 
-
-
     // ---- COUNTER: TOTAL SORTED ----
+
     private async Task IncrementSortedTotalAsync()
     {
         var c = await _dbService.GetCounterAsync();
@@ -522,4 +535,3 @@ public partial class MainWindow : Window
         _correctCounterBox.Text = c.ItemsSortedTotal.ToString();
     }
 }
----

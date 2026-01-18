@@ -1,38 +1,26 @@
 def group5_minimal():
 
-  # --- OnRobot RG2 (Compute Box / URCap server) ---
   rg = rpc_factory("xmlrpc", "http://172.20.254.102:41414")
 
-  # Tool setup (beholdt fordi RG ofte kræver det)
   set_tool_voltage(24)
   set_tool_communication(True, 1000000, 2, 1, 1.5, 3.5)
 
-  # --- Stop Sorting input (DI6) ---
   def stop_requested():
-    return get_standard_digital_in(6)
+    return get_standard_digital_out(6)
   end
 
-
-  # ------------------------------------------------------------
-  # MINIMAL FIX: Vent på gripper er færdig (Busy True -> Busy False)
-  # ------------------------------------------------------------
   def rg_wait_done(tool=0, timeout_s=1.0):
     local t = 0.0
-
-    # Vent til den er begyndt (busy = True)
     while (rg.rg_get_busy(tool) == False) and (t < timeout_s):
       sleep(0.01)
       t = t + 0.01
     end
-
-    # Vent til den er færdig (busy = False)
     while (rg.rg_get_busy(tool) == True) and (t < timeout_s):
       sleep(0.01)
       t = t + 0.01
     end
   end
 
-  # Optional: ved pick, vent til den faktisk registrerer greb
   def rg_wait_grip_detected(tool=0, timeout_s=1.0):
     local t = 0.0
     while (rg.rg_get_grip_detected(tool) == False) and (t < timeout_s):
@@ -41,8 +29,7 @@ def group5_minimal():
     end
   end
 
-
-  # --- Poses (UÆNDRET) ---
+  # --- Poses ---
   p_home_p          = p[-.130588180302, -.295899334319, .471525063587, 2.538953616766, .006610044824, .001324343615]
   p_home_q          = [-1.5685136953936976, -1.5705312532121134, -0.09931756556034088, -1.9143811664977015, 1.576417088508606, 3.135735511779785]
 
@@ -62,40 +49,55 @@ def group5_minimal():
   p_neutral_p       = p[-.163517935166, -.464288138130, .140802892842, 3.042814864523, -.036887851022, .030344639250]
   p_neutral_q       = [-1.6678016821490687, -1.95436491588735, -1.1173654794692993, -1.0192778271487732, 1.6360406875610352, 3.091822624206543]
 
-  # --- Simple parametre (samme som før) ---
   aJ = 1.3962634015954636
   vJ = 1.0471975511965976
   aL = 1.2
   vL = 0.25
 
-  # --- Loop ---
+  stop_latched = False
+
   while True:
 
     # Home
     movej(get_inverse_kin(p_home_p, qnear=p_home_q), a=aJ, v=vJ)
 
-    # Gripper open (samme kommando, men nu venter vi rigtigt)
+    # Gripper open
     rg.rg_grip(0, 75.0, 40.0)
     rg_wait_done(tool=0, timeout_s=1.0)
 
-    # Conveyor DO7 ON, vent på DI4 HI (max 60 sek)
+    # Conveyor ON, vent på DI4
     set_standard_digital_out(7, True)
     t_wait = 0
 
     while (get_standard_digital_in(4) == False):
       sleep(0.1)
-      t_wait = t_wait + 1
 
-      # hvis ingen dele i 60 sek: stop alt
-      if (t_wait >= 600):
+      # STOP SORTING skal virke uafhængigt af timeout
+      if (stop_requested()):
+        stop_latched = True
         set_standard_digital_out(7, False)
-        popup("No parts for 1 min - stopping :D", "Message", False, False, blocking=True)
+
+        # vi er ved HOME her -> stop helt nu (men pænt)
+        movej(get_inverse_kin(p_home_p, qnear=p_home_q), a=aJ, v=vJ)
+        rg.rg_grip(0, 75.0, 40.0)
+        rg_wait_done(tool=0, timeout_s=1.0)
+
+        # NULSTIL STOP FLAG SÅ NÆSTE START VIRKER
+        set_standard_digital_out(6, False)
+
         halt
       end
 
-      # hvis stop trykkes mens vi venter: sluk conveyor med det samme
-      if (stop_requested()):
+      # Timeout tæller kun, hvis stop ikke er trykket
+      t_wait = t_wait + 1
+      if (t_wait >= 600):
         set_standard_digital_out(7, False)
+        popup("No parts for 1 min - stopping :D", "Message", False, False, blocking=True)
+
+        # NULSTIL STOP FLAG (så det ikke hænger)
+        set_standard_digital_out(6, False)
+
+        halt
       end
     end
 
@@ -106,7 +108,6 @@ def group5_minimal():
     movej(get_inverse_kin(p_over_pick_p, qnear=p_over_pick_q), a=aJ, v=vJ)
     movel(p_pick_p, a=aL, v=vL)
 
-    # Gripper close (samme kommando, men nu venter vi rigtigt)
     rg.rg_grip(0, 16.7, 40.0)
     rg_wait_done(tool=0, timeout_s=1.0)
     rg_wait_grip_detected(tool=0, timeout_s=1.0)
@@ -118,25 +119,36 @@ def group5_minimal():
     movej(get_inverse_kin(p_over_place_p, qnear=p_over_place_q), a=aJ, v=vJ)
     movel(p_place_ok_p, a=aL, v=vL)
 
-    # Release (samme kommando, men nu venter vi rigtigt)
+    # Release
     rg.rg_grip(0, 55.2, 21.0)
     rg_wait_done(tool=0, timeout_s=1.0)
 
-    # Vent til DI4 bliver LO igen
     while (get_standard_digital_in(4) == True):
       sync()
     end
 
-    # Neutral/home-ish (din p_neutral)
+    # Neutral/home-ish
     movej(get_inverse_kin(p_neutral_p, qnear=p_neutral_q), a=aJ, v=vJ)
 
-    # PÆN STOP: stop efter cyklus
+    # latch stop hvis trykket
     if (stop_requested()):
-      break
+      stop_latched = True
+    end
+
+    # Stop efter sidste runde: HOME + stop helt
+    if (stop_latched):
+      set_standard_digital_out(7, False)
+      movej(get_inverse_kin(p_home_p, qnear=p_home_q), a=aJ, v=vJ)
+      rg.rg_grip(0, 75.0, 40.0)
+      rg_wait_done(tool=0, timeout_s=1.0)
+
+      # NULSTIL STOP FLAG SÅ NÆSTE START VIRKER
+      set_standard_digital_out(6, False)
+
+      halt
     end
 
   end
 end
 
 group5_minimal()
-----

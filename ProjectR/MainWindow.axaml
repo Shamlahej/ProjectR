@@ -255,11 +255,13 @@
                                                    Text="Stopped"
                                                    FontWeight="Bold"/>
                                         <Button Name="ConveyorButton"
-                                                Content="Stop Conveyor"
+                                                Content="Start Conveyor"
                                                 Width="240"
                                                 Height="44"
                                                 CornerRadius="8"
                                                 Click="ConveyorButton_OnClick"/>
+
+
                                     </StackPanel>
                                 </Border>
 
@@ -337,4 +339,3 @@
 
     </Grid>
 </Window>
----
