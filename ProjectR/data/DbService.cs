@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,35 +15,9 @@ public class DbService
         _db = db;
     }
 
-    public async Task<bool> EnsureCreatedAndSeedAsync()
-    {
-        var created = await _db.Database.EnsureCreatedAsync();
+    public Task<bool> EnsureCreatedAsync()
+        => _db.Database.EnsureCreatedAsync();
 
-        // Counter-rækken
-        var counter = await _db.Counters.FirstOrDefaultAsync(c => c.Id == 1);
-        if (counter == null)
-        {
-            _db.Counters.Add(new Counter { Id = 1 });
-            await _db.SaveChangesAsync();
-        }
-
-        return created;
-    }
-
-    // Totals (hvis du stadig vil bruge dem)
-    public async Task IncrementSortedAsync(bool isOk)
-    {
-        var c = await _db.Counters.FirstAsync(x => x.Id == 1);
-        c.ItemsSortedTotal += 1;
-        if (isOk) c.ItemsOkTotal += 1;
-        else c.ItemsRejectedTotal += 1;
-        await _db.SaveChangesAsync();
-    }
-
-    public Task<Counter> GetCounterAsync()
-        => _db.Counters.FirstAsync(x => x.Id == 1);
-
-    // Gem “robotten sorterede X”
     public async Task SaveRunAsync(int itemsCounted, string? username)
     {
         _db.SortingRuns.Add(new SortingRun
@@ -50,6 +26,13 @@ public class DbService
             ItemsCounted = itemsCounted,
             Username = username
         });
+
         await _db.SaveChangesAsync();
     }
+
+    public Task<List<SortingRun>> GetLatestRunsAsync(int take)
+        => _db.SortingRuns
+            .OrderByDescending(r => r.EndedAt)
+            .Take(take)
+            .ToListAsync();
 }

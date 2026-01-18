@@ -1,12 +1,18 @@
 def group5_minimal():
 
+  # 0 = manual mode (run forever)
+  # >0 = run exactly N cycles
+  max_cycles = {{MAX_CYCLES}}
+  cycles_done = 0
+
   rg = rpc_factory("xmlrpc", "http://172.20.254.102:41414")
 
   set_tool_voltage(24)
   set_tool_communication(True, 1000000, 2, 1, 1.5, 3.5)
 
+  # STOP = DI6
   def stop_requested():
-    return get_standard_digital_out(6)
+    return get_standard_digital_in(6)
   end
 
   def rg_wait_done(tool=0, timeout_s=1.0):
@@ -29,7 +35,7 @@ def group5_minimal():
     end
   end
 
-  # --- Poses ---
+  # --- Poses (UÆNDRET) ---
   p_home_p          = p[-.130588180302, -.295899334319, .471525063587, 2.538953616766, .006610044824, .001324343615]
   p_home_q          = [-1.5685136953936976, -1.5705312532121134, -0.09931756556034088, -1.9143811664977015, 1.576417088508606, 3.135735511779785]
 
@@ -56,47 +62,45 @@ def group5_minimal():
 
   stop_latched = False
 
+  # Kør conveyor 60 sek og stop ALT (ingen popups)
+  def security_stop():
+    set_standard_digital_out(7, True)
+    sleep(60.0)
+    set_standard_digital_out(7, False)
+    halt
+  end
+
   while True:
 
-    # Home
+    # Home (safe point)
     movej(get_inverse_kin(p_home_p, qnear=p_home_q), a=aJ, v=vJ)
+
+    # Hvis stop allerede aktivt når vi rammer home -> kør security og stop
+    if (stop_requested()):
+      security_stop()
+    end
 
     # Gripper open
     rg.rg_grip(0, 75.0, 40.0)
     rg_wait_done(tool=0, timeout_s=1.0)
 
-    # Conveyor ON, vent på DI4
+    # Conveyor ON og vent på DI4 (max 60 sek)
     set_standard_digital_out(7, True)
     t_wait = 0
 
     while (get_standard_digital_in(4) == False):
       sleep(0.1)
+      t_wait = t_wait + 1
 
-      # STOP SORTING skal virke uafhængigt af timeout
+      # Stop trykket mens vi venter -> latch, stop conveyor nu, men stop først efter cyklus/home
       if (stop_requested()):
         stop_latched = True
         set_standard_digital_out(7, False)
-
-        # vi er ved HOME her -> stop helt nu (men pænt)
-        movej(get_inverse_kin(p_home_p, qnear=p_home_q), a=aJ, v=vJ)
-        rg.rg_grip(0, 75.0, 40.0)
-        rg_wait_done(tool=0, timeout_s=1.0)
-
-        # NULSTIL STOP FLAG SÅ NÆSTE START VIRKER
-        set_standard_digital_out(6, False)
-
-        halt
       end
 
-      # Timeout tæller kun, hvis stop ikke er trykket
-      t_wait = t_wait + 1
+      # Timeout 60s uden del -> stop alt (ingen popups)
       if (t_wait >= 600):
         set_standard_digital_out(7, False)
-        popup("No parts for 1 min - stopping :D", "Message", False, False, blocking=True)
-
-        # NULSTIL STOP FLAG (så det ikke hænger)
-        set_standard_digital_out(6, False)
-
         halt
       end
     end
@@ -123,6 +127,7 @@ def group5_minimal():
     rg.rg_grip(0, 55.2, 21.0)
     rg_wait_done(tool=0, timeout_s=1.0)
 
+    # Vent DI4 low igen
     while (get_standard_digital_in(4) == True):
       sync()
     end
@@ -130,22 +135,24 @@ def group5_minimal():
     # Neutral/home-ish
     movej(get_inverse_kin(p_neutral_p, qnear=p_neutral_q), a=aJ, v=vJ)
 
-    # latch stop hvis trykket
+    # Cycle done
+    cycles_done = cycles_done + 1
+
+    # Stop requested i løbet af cyklus
     if (stop_requested()):
       stop_latched = True
     end
 
-    # Stop efter sidste runde: HOME + stop helt
+    # Stop efter cyklus + home + security
     if (stop_latched):
-      set_standard_digital_out(7, False)
       movej(get_inverse_kin(p_home_p, qnear=p_home_q), a=aJ, v=vJ)
-      rg.rg_grip(0, 75.0, 40.0)
-      rg_wait_done(tool=0, timeout_s=1.0)
+      security_stop()
+    end
 
-      # NULSTIL STOP FLAG SÅ NÆSTE START VIRKER
-      set_standard_digital_out(6, False)
-
-      halt
+    # Batch done -> home + security + stop
+    if (max_cycles > 0) and (cycles_done >= max_cycles):
+      movej(get_inverse_kin(p_home_p, qnear=p_home_q), a=aJ, v=vJ)
+      security_stop()
     end
 
   end

@@ -4,338 +4,364 @@
         Width="920"
         Height="680"
         Title="ProjectR - Sorting Robot Arm">
-<Window.Styles>
-  <Style>
-    <Style.Resources>
-      <SolidColorBrush x:Key="Bg" Color="#0F172A"/>
-      <SolidColorBrush x:Key="Card" Color="#111C34"/>
-      <SolidColorBrush x:Key="Card2" Color="#0B1224"/>
-      <SolidColorBrush x:Key="Border" Color="#24314F"/>
-      <SolidColorBrush x:Key="Text" Color="#E5E7EB"/>
-      <SolidColorBrush x:Key="Muted" Color="#94A3B8"/>
 
-      <SolidColorBrush x:Key="Btn" Color="#1F2A44"/>
-      <SolidColorBrush x:Key="BtnHover" Color="#24314F"/>
-      <SolidColorBrush x:Key="Danger" Color="#DC2626"/>
-      <SolidColorBrush x:Key="DangerHover" Color="#B91C1C"/>
-    </Style.Resources>
-  </Style>
+  <Window.Styles>
+    <Style>
+      <Style.Resources>
+        <SolidColorBrush x:Key="Bg" Color="#0F172A"/>
+        <SolidColorBrush x:Key="Card" Color="#111C34"/>
+        <SolidColorBrush x:Key="Card2" Color="#0B1224"/>
+        <SolidColorBrush x:Key="Border" Color="#24314F"/>
+        <SolidColorBrush x:Key="Text" Color="#E5E7EB"/>
+        <SolidColorBrush x:Key="Muted" Color="#94A3B8"/>
 
-  <Style Selector="TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource Text}"/>
-  </Style>
+        <SolidColorBrush x:Key="Btn" Color="#1F2A44"/>
+        <SolidColorBrush x:Key="BtnHover" Color="#24314F"/>
+        <SolidColorBrush x:Key="Danger" Color="#DC2626"/>
+        <SolidColorBrush x:Key="DangerHover" Color="#B91C1C"/>
+      </Style.Resources>
+    </Style>
 
-  <Style Selector="TextBox">
-    <Setter Property="Background" Value="{DynamicResource Card2}"/>
-    <Setter Property="Foreground" Value="{DynamicResource Text}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="CornerRadius" Value="10"/>
-    <Setter Property="Padding" Value="10,8"/>
-  </Style>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+    </Style>
 
-  <Style Selector="Button">
-    <Setter Property="Background" Value="{DynamicResource Btn}"/>
-    <Setter Property="Foreground" Value="{DynamicResource Text}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="CornerRadius" Value="10"/>
-    <Setter Property="Padding" Value="12,8"/>
-  </Style>
-  <Style Selector="Button:pointerover">
-    <Setter Property="Background" Value="{DynamicResource BtnHover}"/>
-  </Style>
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="{DynamicResource Card2}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="10,8"/>
+    </Style>
 
-  <Style Selector="Border#RootBackground">
-    <Setter Property="Background" Value="{DynamicResource Bg}"/>
-  </Style>
+    <Style Selector="Button">
+      <Setter Property="Background" Value="{DynamicResource Btn}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="12,8"/>
+    </Style>
+    <Style Selector="Button:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BtnHover}"/>
+    </Style>
 
-  <Style Selector="Border#MainCard">
-    <Setter Property="Background" Value="{DynamicResource Card}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-  </Style>
+    <Style Selector="Border#RootBackground">
+      <Setter Property="Background" Value="{DynamicResource Bg}"/>
+    </Style>
 
-  <Style Selector="Border#BottomCard">
-    <Setter Property="Background" Value="{DynamicResource Card}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-  </Style>
+    <Style Selector="Border#MainCard">
+      <Setter Property="Background" Value="{DynamicResource Card}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
 
-  <Style Selector="Border#TopBarCard">
-    <Setter Property="Background" Value="{DynamicResource Card}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-  </Style>
+    <Style Selector="Border#BottomCard">
+      <Setter Property="Background" Value="{DynamicResource Card}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
 
-  <Style Selector="Border#CountersPanel">
-    <Setter Property="Background" Value="{DynamicResource Card2}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-  </Style>
+    <Style Selector="Border#TopBarCard">
+      <Setter Property="Background" Value="{DynamicResource Card}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
 
-  <Style Selector="Border#StatusPanel">
-    <Setter Property="Background" Value="{DynamicResource Card2}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-  </Style>
+    <Style Selector="Border#BatchPanel">
+      <Setter Property="Background" Value="{DynamicResource Card2}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
 
-  <Style Selector="Border#EmergencyPanel">
-    <Setter Property="Background" Value="{DynamicResource Card2}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-  </Style>
+    <Style Selector="Border#StatusPanel">
+      <Setter Property="Background" Value="{DynamicResource Card2}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
 
-  <Style Selector="Button#EmergencyButton">
-    <Setter Property="Background" Value="{DynamicResource Danger}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource DangerHover}"/>
-  </Style>
-  <Style Selector="Button#EmergencyButton:pointerover">
-    <Setter Property="Background" Value="{DynamicResource DangerHover}"/>
-  </Style>
+    <Style Selector="Border#EmergencyPanel">
+      <Setter Property="Background" Value="{DynamicResource Card2}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
 
-  <Style Selector="TextBlock#StatusHintText">
-    <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
-  </Style>
-  <Style Selector="TextBlock#ConveyorStatusText">
-    <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
-  </Style>
-</Window.Styles>
+    <Style Selector="Button#EmergencyButton">
+      <Setter Property="Background" Value="{DynamicResource Danger}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource DangerHover}"/>
+    </Style>
+    <Style Selector="Button#EmergencyButton:pointerover">
+      <Setter Property="Background" Value="{DynamicResource DangerHover}"/>
+    </Style>
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Style Selector="TextBlock#StatusHintText">
+      <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
+    </Style>
 
-        <TabControl Name="TabControl" Grid.Row="0">
+    <Style Selector="TextBlock#ConveyorStatusText">
+      <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
+    </Style>
 
-            <TabItem Header="🔑 Login" Name="LoginTab">
-                <StackPanel Margin="12" Spacing="8">
-                    <TextBox Name="LoginUsername" Watermark="username" Text="admin"/>
-                    <TextBox Name="LoginPassword" Watermark="password" PasswordChar="●" Text="admin"/>
-                    <Button Click="LoginButton_OnClick">Login</Button>
+    <Style Selector="TextBlock#BatchHintText">
+      <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- Tabs -->
+    <TabControl Name="TabControl" Grid.Row="0">
+
+      <!-- LOGIN -->
+      <TabItem Header="🔑 Login" Name="LoginTab">
+        <StackPanel Margin="12" Spacing="8">
+          <TextBox Name="LoginUsername" Watermark="username" Text="admin"/>
+          <TextBox Name="LoginPassword" Watermark="password" PasswordChar="●" Text="admin"/>
+          <Button Click="LoginButton_OnClick">Login</Button>
+        </StackPanel>
+      </TabItem>
+
+      <!-- ROBOT -->
+      <TabItem Header="🦾 Robot" Name="RobotTab">
+        <Border Name="RootBackground">
+          <Grid Margin="24">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title -->
+            <StackPanel Grid.Row="0" Spacing="6" HorizontalAlignment="Center">
+              <TextBlock Text="Sorting Robot Arm" FontSize="28" FontWeight="Bold"/>
+              <TextBlock Text="Standalone HMI (simulation)" FontSize="14" Opacity="0.7"/>
+            </StackPanel>
+
+            <!-- Top bar -->
+            <Border Grid.Row="1"
+                    Name="TopBarCard"
+                    Margin="0,18,0,0"
+                    CornerRadius="14"
+                    Padding="14">
+              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock VerticalAlignment="Center" Text="Robot IP:"/>
+                <TextBox Name="IpAddress" Width="220" Text="172.20.254.207"/>
+
+                <Button Click="ConnectButton_OnClick"
+                        Width="140"
+                        Height="38"
+                        CornerRadius="8"
+                        Content="Connect"/>
+              </StackPanel>
+            </Border>
+
+            <!-- Main -->
+            <Border Grid.Row="2"
+                    Name="MainCard"
+                    Margin="0,20,0,0"
+                    CornerRadius="14"
+                    Padding="22">
+
+              <Grid ColumnDefinitions="*,*"
+                    RowDefinitions="Auto,Auto"
+                    ColumnSpacing="22"
+                    RowSpacing="18">
+
+                <!-- LEFT -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Spacing="16">
+                  <TextBlock Text="Control" FontSize="18" FontWeight="Bold"/>
+
+                  <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Button Name="StartButton"
+                            Content="Start Sorting"
+                            Width="170"
+                            Height="44"
+                            CornerRadius="8"
+                            Click="StartButton_OnClick"/>
+
+                    <Button Name="StopButton"
+                            Content="Stop Sorting"
+                            Width="170"
+                            Height="44"
+                            CornerRadius="8"
+                            IsEnabled="False"
+                            Click="StopButton_OnClick"/>
+                  </StackPanel>
+
+                  <!-- Clear Result (matcher ResetButton_OnClick i CS) -->
+                  <Button Name="ResetButton"
+                          Content="Clear Result"
+                          Width="170"
+                          Height="40"
+                          CornerRadius="8"
+                          Click="ResetButton_OnClick"/>
+
+                  <Border Name="EmergencyPanel"
+                          BorderThickness="1"
+                          CornerRadius="12"
+                          Padding="14">
+                    <StackPanel Spacing="10">
+                      <TextBlock Text="Emergency" FontSize="16" FontWeight="Bold"/>
+                      <TextBlock Text="Stops sorting and conveyor" Opacity="0.8"/>
+                      <Button Name="EmergencyButton"
+                              Content="EMERGENCY STOP"
+                              Height="54"
+                              FontSize="16"
+                              FontWeight="Bold"
+                              CornerRadius="10"
+                              Click="EmergencyButton_OnClick"/>
+                    </StackPanel>
+                  </Border>
                 </StackPanel>
-            </TabItem>
 
-            <TabItem Header="🦾 Robot" Name="RobotTab">
+                <!-- RIGHT TOP: Batch panel -->
+                <Border Name="BatchPanel"
+                        Grid.Row="0" Grid.Column="1"
+                        CornerRadius="12"
+                        Padding="14">
+                  <StackPanel Spacing="10">
+                    <TextBlock Text="BATCH MODE" FontSize="18" FontWeight="Bold"/>
+                    <TextBlock Name="BatchHintText"
+                               Text="Write a number and press Run Batch. Leave empty for manual mode."
+                               Opacity="0.8"/>
 
-                <Border Name="RootBackground">
-                    <Grid Margin="24">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <TextBox Name="BatchCountBox"
+                               Width="140"
+                               Height="44"
+                               FontSize="18"
+                               HorizontalContentAlignment="Center"
+                               Watermark="e.g. 5"/>
+                      <Button Name="RunBatchButton"
+                              Content="Run Batch"
+                              Width="140"
+                              Height="44"
+                              CornerRadius="8"
+                              Click="RunBatchButton_OnClick"/>
+                    </StackPanel>
 
-                        <StackPanel Grid.Row="0" Spacing="6" HorizontalAlignment="Center">
-                            <TextBlock Text="Sorting Robot Arm"
-                                       FontSize="28"
-                                       FontWeight="Bold"/>
-                            <TextBlock Text="Standalone HMI (simulation)"
-                                       FontSize="14"
-                                       Opacity="0.7"/>
-                        </StackPanel>
+                    <!-- target cycles line (CS forventer den findes) -->
+                    <TextBlock Name="TargetCyclesText"
+                               Text=""
+                               Opacity="0.8"/>
 
-                        <Border Grid.Row="1"
-                                Name="TopBarCard"
-                                Margin="0,18,0,0"
-                                CornerRadius="14"
-                                Padding="14">
-                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                <TextBlock VerticalAlignment="Center" Text="Robot IP:"/>
-                                <TextBox Name="IpAddress" Width="220" Text="172.20.254.207"/>
+                    <Separator/>
 
-                                <Button Click="ConnectButton_OnClick"
-                                        Width="140"
-                                        Height="38"
-                                        CornerRadius="8"
-                                        Content="Connect"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Row="2"
-                                Name="MainCard"
-                                Margin="0,20,0,0"
-                                CornerRadius="14"
-                                Padding="22">
-
-                            <Grid ColumnDefinitions="*,*"
-                                  RowDefinitions="Auto,Auto"
-                                  ColumnSpacing="22"
-                                  RowSpacing="18">
-
-                                <StackPanel Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Spacing="16">
-                                    <TextBlock Text="Control"
-                                               FontSize="18"
-                                               FontWeight="Bold"/>
-
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <Button Name="StartButton"
-                                                Content="Start Sorting"
-                                                Width="170"
-                                                Height="44"
-                                                CornerRadius="8"
-                                                Click="StartButton_OnClick"/>
-
-                                        <Button Name="StopButton"
-                                                Content="Stop Sorting"
-                                                Width="170"
-                                                Height="44"
-                                                CornerRadius="8"
-                                                IsEnabled="False"
-                                                Click="StopButton_OnClick"/>
-                                    </StackPanel>
-
-                                    <Button Name="ResetButton"
-                                            Content="Reset Counter"
-                                            Width="170"
-                                            Height="40"
-                                            CornerRadius="8"
-                                            Click="ResetButton_OnClick"/>
-
-                                    <Border Name="EmergencyPanel"
-                                            BorderThickness="1"
-                                            CornerRadius="12"
-                                            Padding="14">
-                                        <StackPanel Spacing="10">
-                                            <TextBlock Name="EmergencyTitle"
-                                                       Text="Emergency"
-                                                       FontSize="16"
-                                                       FontWeight="Bold"/>
-                                            <TextBlock Text="Stops sorting and conveyor"
-                                                       Opacity="0.8"/>
-                                            <Button Name="EmergencyButton"
-                                                    Content="EMERGENCY STOP"
-                                                    Height="54"
-                                                    FontSize="16"
-                                                    FontWeight="Bold"
-                                                    CornerRadius="10"
-                                                    Click="EmergencyButton_OnClick"/>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-
-                                <Border Name="CountersPanel"
-                                        Grid.Row="0" Grid.Column="1"
-                                        CornerRadius="12"
-                                        Padding="14">
-                                    <StackPanel Spacing="6">
-                                        <TextBlock Text="CORRECT SORTED"
-                                                   FontSize="18"
-                                                   FontWeight="Bold"/>
-                                        <TextBox Name="CorrectCounterBox"
-                                                 Text="0"
-                                                 IsReadOnly="True"
-                                                 Width="240"
-                                                 Height="64"
-                                                 FontSize="32"
-                                                 FontWeight="Bold"
-                                                 HorizontalContentAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Name="StatusPanel"
-                                        Grid.Row="1" Grid.Column="1"
-                                        CornerRadius="12"
-                                        Padding="14">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock Text="Status"
-                                                   FontWeight="Bold"/>
-                                        <TextBlock Name="StatusText"
-                                                   Text="Ready"
-                                                   FontSize="16"
-                                                   FontWeight="Bold"/>
-                                        <TextBlock Name="StatusHintText"
-                                                   Text="Waiting"
-                                                   Opacity="0.7"/>
-
-                                        <Separator/>
-
-                                        <TextBlock Text="Conveyor"
-                                                   FontWeight="Bold"/>
-                                        <TextBlock Name="ConveyorStatusText"
-                                                   Text="Stopped"
-                                                   FontWeight="Bold"/>
-                                        <Button Name="ConveyorButton"
-                                                Content="Start Conveyor"
-                                                Width="240"
-                                                Height="44"
-                                                CornerRadius="8"
-                                                Click="ConveyorButton_OnClick"/>
-
-
-                                    </StackPanel>
-                                </Border>
-
-                            </Grid>
-                        </Border>
-
-                        <Border Grid.Row="3"
-                                Name="BottomCard"
-                                Margin="0,18,0,0"
-                                CornerRadius="14"
-                                Padding="16">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="Log"
-                                           FontSize="16"
-                                           FontWeight="Bold"/>
-                                <TextBox Name="LogBox"
-                                         Height="140"
-                                         AcceptsReturn="True"
-                                         IsReadOnly="True"
-                                         FontFamily="Consolas"
-                                         FontSize="12"/>
-                            </StackPanel>
-                        </Border>
-
-                    </Grid>
+                    <TextBlock Text="RESULT" FontWeight="Bold"/>
+                    <TextBlock Name="BatchResultText"
+                               Text="—"
+                               FontSize="18"
+                               FontWeight="Bold"/>
+                  </StackPanel>
                 </Border>
 
-            </TabItem>
+                <!-- RIGHT BOTTOM: Status -->
+                <Border Name="StatusPanel"
+                        Grid.Row="1" Grid.Column="1"
+                        CornerRadius="12"
+                        Padding="14">
+                  <StackPanel Spacing="10">
+                    <TextBlock Text="Status" FontWeight="Bold"/>
+                    <TextBlock Name="StatusText"
+                               Text="Ready"
+                               FontSize="16"
+                               FontWeight="Bold"/>
+                    <TextBlock Name="StatusHintText"
+                               Text="Waiting"
+                               Opacity="0.7"/>
 
-            <TabItem Header="👥 Users" Name="UsersTab">
-                <StackPanel Margin="12" Spacing="8">
-                    <TextBlock FontWeight="Bold" Text="Create User"/>
-                    <TextBox Name="CreateUserUsername" Watermark="username"/>
-                    <TextBox Name="CreateUserPassword" Watermark="password" PasswordChar="●"/>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock VerticalAlignment="Center" Text="Is admin"/>
-                        <CheckBox Name="CreateUserIsAdmin"/>
-                    </StackPanel>
-                    <Button Click="CreateUserButton_OnClick">Register</Button>
-                </StackPanel>
-            </TabItem>
+                    <Separator/>
 
-            <TabItem Header="🛢 Database" Name="DatabaseTab">
-                <StackPanel Margin="12" Spacing="8">
-                    <Button Click="RecreateDatabaseButton_OnClick">Recreate database</Button>
-                    <Button Click="ShowCounter_OnClick">Show counter</Button>
-                </StackPanel>
-            </TabItem>
+                    <TextBlock Text="Conveyor" FontWeight="Bold"/>
+                    <TextBlock Name="ConveyorStatusText"
+                               Text="Stopped"
+                               FontWeight="Bold"/>
+                    <Button Name="ConveyorButton"
+                            Content="Start Conveyor"
+                            Width="240"
+                            Height="44"
+                            CornerRadius="8"
+                            Click="ConveyorButton_OnClick"/>
+                  </StackPanel>
+                </Border>
 
-        </TabControl>
+              </Grid>
+            </Border>
 
-        <Border Grid.Row="1"
-                Background="{DynamicResource Card}"
-                BorderBrush="{DynamicResource Border}"
-                BorderThickness="1"
-                CornerRadius="14"
-                Padding="12"
-                Margin="24,0,24,0">
+            <!-- Bottom log -->
+            <Border Grid.Row="3"
+                    Name="BottomCard"
+                    Margin="0,18,0,0"
+                    CornerRadius="14"
+                    Padding="16">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Log" FontSize="16" FontWeight="Bold"/>
+                <TextBox Name="LogBox"
+                         Height="140"
+                         AcceptsReturn="True"
+                         IsReadOnly="True"
+                         FontFamily="Consolas"
+                         FontSize="12"/>
+              </StackPanel>
+            </Border>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <TextBlock Name="LogOutput"
-                           TextWrapping="Wrap"
-                           FontFamily="Consolas"
-                           Foreground="{DynamicResource Text}"/>
-            </ScrollViewer>
-
+          </Grid>
         </Border>
+      </TabItem>
 
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
-            <Button Grid.Column="0" Click="ClearLogButton_OnClick">Clear</Button>
-            <Button Grid.Column="1" Name="LogoutButton" IsVisible="False" Click="LogoutButton_OnClick" Margin="8,0,0,0">
-                Logout
-            </Button>
-        </Grid>
+      <!-- USERS -->
+      <TabItem Header="👥 Users" Name="UsersTab">
+        <StackPanel Margin="12" Spacing="8">
+          <TextBlock FontWeight="Bold" Text="Create User"/>
+          <TextBox Name="CreateUserUsername" Watermark="username"/>
+          <TextBox Name="CreateUserPassword" Watermark="password" PasswordChar="●"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock VerticalAlignment="Center" Text="Is admin"/>
+            <CheckBox Name="CreateUserIsAdmin"/>
+          </StackPanel>
+          <Button Click="CreateUserButton_OnClick">Register</Button>
+        </StackPanel>
+      </TabItem>
 
+      <!-- DATABASE -->
+      <TabItem Header="🛢 Database" Name="DatabaseTab">
+        <StackPanel Margin="12" Spacing="8">
+          <Button Click="RecreateDatabaseButton_OnClick">Recreate database</Button>
+          <Button Click="ShowRunsButton_OnClick">Show runs</Button>
+        </StackPanel>
+      </TabItem>
+
+    </TabControl>
+
+    <!-- Log output -->
+    <Border Grid.Row="1"
+            Background="{DynamicResource Card}"
+            BorderBrush="{DynamicResource Border}"
+            BorderThickness="1"
+            CornerRadius="14"
+            Padding="12"
+            Margin="24,0,24,0">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <TextBlock Name="LogOutput"
+                   TextWrapping="Wrap"
+                   FontFamily="Consolas"
+                   Foreground="{DynamicResource Text}"/>
+      </ScrollViewer>
+    </Border>
+
+    <!-- Bottom bar -->
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+      <Button Grid.Column="0" Click="ClearLogButton_OnClick">Clear</Button>
+      <Button Grid.Column="1"
+              Name="LogoutButton"
+              IsVisible="False"
+              Click="LogoutButton_OnClick"
+              Margin="8,0,0,0">
+        Logout
+      </Button>
     </Grid>
+
+  </Grid>
 </Window>

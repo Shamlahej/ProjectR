@@ -7,7 +7,6 @@ namespace ProjectR.data;
 public class AppDbContext : DbContext
 {
     public DbSet<Account> Accounts => Set<Account>();
-    public DbSet<Counter> Counters => Set<Counter>();
     public DbSet<SortingRun> SortingRuns => Set<SortingRun>();
 
     private readonly string _dbPath;

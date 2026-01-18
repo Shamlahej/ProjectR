@@ -1,10 +1,12 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Microsoft.EntityFrameworkCore;
 using ProjectR.data;
 
 namespace ProjectR;
@@ -38,21 +40,27 @@ public partial class MainWindow : Window
     private Button _stopButton = null!;
     private Button _resetButton = null!;
     private Button _conveyorButton = null!;
-    private TextBox _correctCounterBox = null!;
     private TextBlock _statusText = null!;
     private TextBlock _statusHintText = null!;
     private TextBlock _conveyorStatusText = null!;
     private TextBox _robotLogBox = null!;
 
+    // Batch UI (matcher XAML)
+    private TextBox _batchInput = null!;
+    private Button _runBatchButton = null!;
+    private TextBlock _resultText = null!;
+    private TextBlock _targetCyclesText = null!;
+
     private bool _sortingRunning;
     private bool _conveyorRunning;
 
-    // --- STOP wiring ---
-    // PC sætter DO6 -> (wired) -> robot læser DI6 i script
-    private const int StopDoIndex = 6;
+    private bool _batchActive;
+    private int _batchTarget;
 
-    // PC sætter DO5 -> (wired) -> robot læser DI7 (conveyor stop input)
-    private const int ConveyorStopDoIndex = 5;
+    private string? _currentUsername;
+
+    // STOP wiring (PC DO6 -> robot DI6)
+    private const int StopDoIndex = 6;
 
     public MainWindow()
     {
@@ -93,14 +101,20 @@ public partial class MainWindow : Window
         _stopButton = this.FindControl<Button>("StopButton")!;
         _resetButton = this.FindControl<Button>("ResetButton")!;
         _conveyorButton = this.FindControl<Button>("ConveyorButton")!;
-        _correctCounterBox = this.FindControl<TextBox>("CorrectCounterBox")!;
         _statusText = this.FindControl<TextBlock>("StatusText")!;
         _statusHintText = this.FindControl<TextBlock>("StatusHintText")!;
         _conveyorStatusText = this.FindControl<TextBlock>("ConveyorStatusText")!;
         _robotLogBox = this.FindControl<TextBox>("LogBox")!;
 
-        // Start UI korrekt: conveyor er stopped -> knap skal sige "Start Conveyor"
+        // Batch panel controls (XAML-navne)
+        _batchInput = this.FindControl<TextBox>("BatchCountBox")!;
+        _runBatchButton = this.FindControl<Button>("RunBatchButton")!;
+        _resultText = this.FindControl<TextBlock>("BatchResultText")!;
+        _targetCyclesText = this.FindControl<TextBlock>("TargetCyclesText")!;
+
         SetConveyorUi(false);
+        SetResult("—");
+        SetTargetCyclesText("");
     }
 
     private void InitServices()
@@ -115,24 +129,21 @@ public partial class MainWindow : Window
     {
         try
         {
-            var created = await _dbService.EnsureCreatedAndSeedAsync();
+            await _db.Database.EnsureCreatedAsync();
 
-            if (created)
+            if (!await _accountService.UsernameExistsAsync("admin"))
             {
-                if (!await _accountService.UsernameExistsAsync("admin"))
-                    await _accountService.NewAccountAsync("admin", "admin", true);
-
-                if (!await _accountService.UsernameExistsAsync("user"))
-                    await _accountService.NewAccountAsync("user", "user", false);
-
-                Log("Database created + seeded (admin/user + counter).");
-            }
-            else
-            {
-                Log("Database exists.");
+                await _accountService.NewAccountAsync("admin", "admin", true);
+                Log("Seeded missing admin/admin.");
             }
 
-            await RefreshRobotCounterBoxAsync();
+            if (!await _accountService.UsernameExistsAsync("user"))
+            {
+                await _accountService.NewAccountAsync("user", "user", false);
+                Log("Seeded missing user/user.");
+            }
+
+            Log("Database ready.");
         }
         catch (Exception ex)
         {
@@ -151,6 +162,10 @@ public partial class MainWindow : Window
     {
         _robotLogBox.Text += $"[{DateTime.Now:HH:mm:ss}] {msg}{Environment.NewLine}";
     }
+
+    private void SetResult(string s) => _resultText.Text = string.IsNullOrWhiteSpace(s) ? "—" : s;
+
+    private void SetTargetCyclesText(string s) => _targetCyclesText.Text = s;
 
     // ---------------- LOGIN ----------------
 
@@ -174,6 +189,7 @@ public partial class MainWindow : Window
             }
 
             var account = await _accountService.GetAccountAsync(username);
+            _currentUsername = account.Username;
 
             _logoutButton.IsVisible = true;
 
@@ -210,6 +226,9 @@ public partial class MainWindow : Window
         _loginTab.IsVisible = true;
         _loginTab.IsSelected = true;
         _logoutButton.IsVisible = false;
+
+        _currentUsername = null;
+
         Log("Logged out.");
     }
 
@@ -257,17 +276,31 @@ public partial class MainWindow : Window
         }
     }
 
-    public async void ShowCounter_OnClick(object? sender, RoutedEventArgs e)
+    public async void ShowRunsButton_OnClick(object? sender, RoutedEventArgs e)
     {
         try
         {
-            var c = await _dbService.GetCounterAsync();
-            Log($"Counter: Sorted={c.ItemsSortedTotal}, OK={c.ItemsOkTotal}, Reject={c.ItemsRejectedTotal}");
-            _correctCounterBox.Text = c.ItemsSortedTotal.ToString();
+            // Vis de nyeste 50 runs i log
+            var runs = await _db.SortingRuns
+                .OrderByDescending(r => r.EndedAt)
+                .Take(50)
+                .ToListAsync();
+
+            Log("---- Latest runs ----");
+            if (runs.Count == 0)
+            {
+                Log("(no runs saved yet)");
+            }
+            else
+            {
+                foreach (var r in runs)
+                    Log($"{r.EndedAt:yy-MM-dd HH:mm:ss} | ItemsCounted={r.ItemsCounted} | Username={r.Username}");
+            }
+            Log("---------------------");
         }
         catch (Exception ex)
         {
-            Log("ShowCounter error: " + ex.Message);
+            Log("Show runs error: " + ex.Message);
         }
     }
 
@@ -285,35 +318,15 @@ public partial class MainWindow : Window
                 return;
             }
 
-            _robot = new Robot(ip);
-
-            // (du må gerne beholde listener hvis du bruger COUNT events i dit robot.script)
-            _robot.StartEventListener(5005);
-
-            _robot.RobotEventReceived += (msg) =>
-            {
-                Dispatcher.UIThread.Post(async () =>
-                {
-                    RobotUiLog("EVENT: " + msg);
-
-                    if (msg == "COUNT")
-                    {
-                        await IncrementSortedTotalAsync();
-                    }
-                });
-            };
-
+            _robot = new Robot(ip, dashboardPort: 29999, urscriptPort: 30003);
             await _robot.ConnectAsync();
 
-            // Sæt StopDo til false ved connect (så du ikke starter i stop-tilstand)
             _robot.SetStandardDigitalOut(StopDoIndex, false);
-
-            // Conveyor OFF ved connect + sync UI
             _robot.SetStandardDigitalOut(7, false);
             SetConveyorUi(false);
 
-            Log($"Connected to {ip}. Dashboard=29999, URScript=30002.");
-            RobotUiLog($"Connected to {ip}. Dashboard=29999, URScript=30002.");
+            Log($"Connected to {ip}. Dashboard=29999, URScript=30003.");
+            RobotUiLog($"Connected to {ip}. Dashboard=29999, URScript=30003.");
         }
         catch (Exception ex)
         {
@@ -322,12 +335,11 @@ public partial class MainWindow : Window
         }
     }
 
-    // Send robot.script (bruges af Start Sorting)
-    private bool SendRobotScriptInternal()
+    // Send robot.script med MAX_CYCLES injected
+    private bool SendRobotScriptWithCycles(int maxCycles)
     {
         if (_robot == null || !_robot.Connected)
         {
-            Log("Tryk Connect først.");
             RobotUiLog("Tryk Connect først.");
             return false;
         }
@@ -353,18 +365,19 @@ public partial class MainWindow : Window
 
         if (scriptPath == null)
         {
-            Log("Fandt ikke robot.script. Læg den i samme mappe som ProjectR.csproj.");
             RobotUiLog("Fandt ikke robot.script. Læg den i samme mappe som ProjectR.csproj.");
             return false;
         }
 
-        _robot.SendUrscriptFile(scriptPath);
-        Log("robot.script sendt fra: " + scriptPath);
-        RobotUiLog("robot.script sendt fra: " + scriptPath);
+        var raw = File.ReadAllText(scriptPath);
+        var program = raw.Replace("{{MAX_CYCLES}}", maxCycles.ToString());
+
+        _robot.SendUrscript(program);
+        RobotUiLog($"robot.script sendt (max_cycles={maxCycles}).");
         return true;
     }
 
-    // ---------------- ROBOT GUI ----------------
+    // ---------------- UI helpers ----------------
 
     private void SetConveyorUi(bool running)
     {
@@ -373,7 +386,9 @@ public partial class MainWindow : Window
         _conveyorButton.Content = running ? "Stop Conveyor" : "Start Conveyor";
     }
 
-    public async void StartButton_OnClick(object? sender, RoutedEventArgs e)
+    // ---------------- MANUAL ----------------
+
+    public void StartButton_OnClick(object? sender, RoutedEventArgs e)
     {
         try
         {
@@ -383,27 +398,26 @@ public partial class MainWindow : Window
                 return;
             }
 
-            // Nulstil stop-flag: DO6 = False
+            _batchActive = false;
+            _batchTarget = 0;
+            SetTargetCyclesText("");
+
             _robot.SetStandardDigitalOut(StopDoIndex, false);
 
-            // Nulstil conveyor stop-flag: DO5 = False
-            _robot.SetStandardDigitalOut(ConveyorStopDoIndex, false);
-
-            if (!SendRobotScriptInternal())
+            // Manual mode => max_cycles = 0
+            if (!SendRobotScriptWithCycles(0))
                 return;
 
-            // Sorting starter conveyor med det samme -> opdater UI
             SetConveyorUi(true);
-
-            await RefreshRobotCounterBoxAsync();
 
             _sortingRunning = true;
             _startButton.IsEnabled = false;
             _stopButton.IsEnabled = true;
+            _runBatchButton.IsEnabled = true;
 
             _statusText.Text = "Running";
-            _statusHintText.Text = "Sorting in progress...";
-            RobotUiLog("Started sorting (script sent).");
+            _statusHintText.Text = "Manual mode";
+            SetResult("Running manual...");
         }
         catch (Exception ex)
         {
@@ -413,65 +427,162 @@ public partial class MainWindow : Window
 
     public void StopButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        _sortingRunning = false;
-
-        // Pæn stop: sæt DO6 = True (robot.script læser DI6 og stopper efter cyklus)
         try
         {
+            _sortingRunning = false;
+            _batchActive = false;
+
             if (_robot != null && _robot.Connected)
-            {
                 _robot.SetStandardDigitalOut(StopDoIndex, true);
-                RobotUiLog($"Stop requested (DO{StopDoIndex}=ON). Will stop after current cycle.");
-            }
-            else
-            {
-                RobotUiLog("Stop pressed, but robot not connected.");
-            }
+
+            _startButton.IsEnabled = true;
+            _stopButton.IsEnabled = false;
+
+            _statusText.Text = "Stopping...";
+            _statusHintText.Text = "Robot will halt";
+            SetResult("Stopping...");
         }
         catch (Exception ex)
         {
             RobotUiLog("Stop error: " + ex.Message);
         }
-
-        _startButton.IsEnabled = true;
-        _stopButton.IsEnabled = false;
-
-        _statusText.Text = "Stopping...";
-        _statusHintText.Text = "Finishing current cycle";
     }
 
-    public async void ResetButton_OnClick(object? sender, RoutedEventArgs e)
+    // Clear Result
+    public void ResetButton_OnClick(object? sender, RoutedEventArgs e) => SetResult("—");
+
+    // ---------------- BATCH ----------------
+
+    public void RunBatchButton_OnClick(object? sender, RoutedEventArgs e)
     {
         try
         {
-            var c = await _dbService.GetCounterAsync();
-            c.ItemsSortedTotal = 0;
-            c.ItemsOkTotal = 0;
-            c.ItemsRejectedTotal = 0;
-            await _db.SaveChangesAsync();
+            if (_robot == null || !_robot.Connected)
+            {
+                RobotUiLog("Tryk Connect først.");
+                return;
+            }
 
-            _correctCounterBox.Text = "0";
-            RobotUiLog("Counter reset.");
-            Log("Counter reset (DB).");
+            var txt = _batchInput.Text?.Trim() ?? "";
+            if (!int.TryParse(txt, out var n) || n <= 0)
+            {
+                SetResult("Write a valid number (>=1).");
+                return;
+            }
+
+            _batchActive = true;
+            _batchTarget = n;
+            SetTargetCyclesText($"Target cycles: {n}");
+
+            _robot.SetStandardDigitalOut(StopDoIndex, false);
+
+            if (!SendRobotScriptWithCycles(n))
+                return;
+
+            SetConveyorUi(true);
+
+            _startButton.IsEnabled = false;
+            _stopButton.IsEnabled = true;
+            _runBatchButton.IsEnabled = false;
+
+            _statusText.Text = "Running (batch)";
+            _statusHintText.Text = "Batch in progress";
+            SetResult("Running batch...");
+
+            RobotUiLog($"Started batch for {n} cycles.");
+
+            // Monitor: vent på program stopper, så log + DB + sikkerhed
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // kræver Robot.cs har IsProgramRunning()
+                    while (_robot != null && _robot.Connected && _robot.IsProgramRunning())
+                        await Task.Delay(250);
+
+                    await Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        if (!_batchActive)
+                        {
+                            _runBatchButton.IsEnabled = true;
+                            return;
+                        }
+
+                        await RunSecurityTimeAndSaveAsync(_batchTarget);
+
+                        _batchActive = false;
+                        _sortingRunning = false;
+
+                        _startButton.IsEnabled = true;
+                        _stopButton.IsEnabled = false;
+                        _runBatchButton.IsEnabled = true;
+
+                        _statusText.Text = "Ready";
+                        _statusHintText.Text = "Waiting";
+                        SetTargetCyclesText("");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        RobotUiLog("Batch monitor error: " + ex.Message);
+                        SetResult("Batch monitor error.");
+                        _runBatchButton.IsEnabled = true;
+                    });
+                }
+            });
         }
         catch (Exception ex)
         {
-            RobotUiLog("Reset error: " + ex.Message);
+            RobotUiLog("RunBatch error: " + ex.Message);
         }
     }
+
+    private async Task RunSecurityTimeAndSaveAsync(int targetCycles)
+    {
+        // Security start
+        SetResult("Security time started...");
+        RobotUiLog("Security time started (60s).");
+        Log("Security time started (60s).");
+
+        try { _robot?.SetStandardDigitalOut(7, true); } catch { }
+        SetConveyorUi(true);
+
+        var startedUtc = DateTime.UtcNow;
+        await Task.Delay(TimeSpan.FromMinutes(1));
+        var endedUtc = DateTime.UtcNow;
+
+        try { _robot?.SetStandardDigitalOut(7, false); } catch { }
+        SetConveyorUi(false);
+
+        // Security end
+        SetResult("Security time finished.");
+        RobotUiLog("Security time finished.");
+        Log("Security time finished.");
+
+        // Save to DB (samler alt i Username for at undgå schema changes)
+        var meta =
+            $"{_currentUsername ?? "unknown"} | batchCycles={targetCycles} | securityStartUtc={startedUtc:O} | securityEndUtc={endedUtc:O}";
+
+        await _dbService.SaveRunAsync(itemsCounted: targetCycles, username: meta);
+
+        SetResult($"Batch finished: {targetCycles} components faulty. (saved)");
+        RobotUiLog($"Batch finished: {targetCycles} components faulty. (saved)");
+        Log($"Saved run: {meta}");
+    }
+
+    // ---------------- EMERGENCY ----------------
 
     public void EmergencyButton_OnClick(object? sender, RoutedEventArgs e)
     {
         _sortingRunning = false;
+        _batchActive = false;
 
         try
         {
-            // Stop conveyor + stop-flags
             _robot?.SetStandardDigitalOut(7, false);
             _robot?.SetStandardDigitalOut(StopDoIndex, true);
-            _robot?.SetStandardDigitalOut(ConveyorStopDoIndex, true);
-
-            // HÅRDT stop NU
             _robot?.EmergencyStop();
         }
         catch (Exception ex)
@@ -479,18 +590,19 @@ public partial class MainWindow : Window
             RobotUiLog("Emergency error: " + ex.Message);
         }
 
-        // UI skal altid matche: conveyor stoppet
         SetConveyorUi(false);
 
         _startButton.IsEnabled = true;
         _stopButton.IsEnabled = false;
+        _runBatchButton.IsEnabled = true;
 
         _statusText.Text = "EMERGENCY STOP";
         _statusHintText.Text = "System halted";
-
-        RobotUiLog("!!! EMERGENCY STOP !!!");
-        Log("Emergency stop activated.");
+        SetResult("EMERGENCY STOP");
+        SetTargetCyclesText("");
     }
+
+    // ---------------- Conveyor manual toggle ----------------
 
     public void ConveyorButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -502,36 +614,13 @@ public partial class MainWindow : Window
                 return;
             }
 
-            // Toggle kun conveyor (DO7) – påvirker ikke robot stop/start
             var newState = !_conveyorRunning;
-
             _robot.SetStandardDigitalOut(7, newState);
             SetConveyorUi(newState);
-
-            RobotUiLog(newState
-                ? "Conveyor started (DO7=ON)."
-                : "Conveyor stopped (DO7=OFF).");
         }
         catch (Exception ex)
         {
             RobotUiLog("Conveyor error: " + ex.Message);
         }
-    }
-
-    // ---- COUNTER: TOTAL SORTED ----
-
-    private async Task IncrementSortedTotalAsync()
-    {
-        var c = await _dbService.GetCounterAsync();
-        c.ItemsSortedTotal += 1;
-        await _db.SaveChangesAsync();
-
-        _correctCounterBox.Text = c.ItemsSortedTotal.ToString();
-    }
-
-    private async Task RefreshRobotCounterBoxAsync()
-    {
-        var c = await _dbService.GetCounterAsync();
-        _correctCounterBox.Text = c.ItemsSortedTotal.ToString();
     }
 }

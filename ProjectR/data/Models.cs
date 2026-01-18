@@ -93,17 +93,7 @@ public class Account
     public bool IsAdmin { get; set; }
 }
 
-public class Counter
-{
-    // Vi har kun én række: Id=1
-    [Key] public int Id { get; set; } = 1;
-
-    public long ItemsSortedTotal { get; set; }
-    public long ItemsOkTotal { get; set; }
-    public long ItemsRejectedTotal { get; set; }
-}
-
-// Gem “robotten sorterede X” for hver gang man stopper
+// Gem “robotten sorterede X” for hver batch
 public class SortingRun
 {
     [Key] public int Id { get; set; }
@@ -112,6 +102,5 @@ public class SortingRun
 
     public int ItemsCounted { get; set; }
 
-    // Optional: hvem kørte den (kan stå tom)
     public string? Username { get; set; }
 }

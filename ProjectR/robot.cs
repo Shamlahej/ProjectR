@@ -1,9 +1,7 @@
 using System;
 using System.IO;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace ProjectR;
@@ -17,17 +15,14 @@ public sealed class Robot
     private readonly TcpClient _clientDashboard = new();
     private NetworkStream? _streamDashboard;
     private StreamReader? _readerDashboard;
+    private StreamWriter? _writerDashboard;
 
     private readonly TcpClient _clientUrscript = new();
     private NetworkStream? _streamUrscript;
 
-    // Event listener (robot -> PC) for fx "COUNT"
-    private TcpListener? _listener;
-    private CancellationTokenSource? _listenerCts;
+    private readonly object _dashboardLock = new();
 
-    public event Action<string>? RobotEventReceived;
-
-    public Robot(string ipAddress, int dashboardPort = 29999, int urscriptPort = 30002)
+    public Robot(string ipAddress, int dashboardPort = 29999, int urscriptPort = 30003)
     {
         IpAddress = ipAddress;
         DashboardPort = dashboardPort;
@@ -42,11 +37,12 @@ public sealed class Robot
         _clientDashboard.Connect(IpAddress, DashboardPort);
         _streamDashboard = _clientDashboard.GetStream();
         _readerDashboard = new StreamReader(_streamDashboard, Encoding.ASCII);
+        _writerDashboard = new StreamWriter(_streamDashboard, Encoding.ASCII) { AutoFlush = true };
 
         // consume welcome line
         _ = _readerDashboard.ReadLine();
 
-        // URScript
+        // URScript (secondary interface)
         _clientUrscript.Connect(IpAddress, UrscriptPort);
         _streamUrscript = _clientUrscript.GetStream();
     }
@@ -63,20 +59,50 @@ public sealed class Robot
         try { _clientUrscript.Close(); } catch { }
     }
 
+    // ---------------- DASHBOARD ----------------
+
+    private string SendDashboardAndReadLine(string command)
+    {
+        if (_writerDashboard == null || _readerDashboard == null)
+            throw new InvalidOperationException("Dashboard ikke forbundet.");
+
+        lock (_dashboardLock)
+        {
+            _writerDashboard.WriteLine(command);
+            return _readerDashboard.ReadLine() ?? "";
+        }
+    }
+
     public void SendDashboard(string command)
     {
-        if (_streamDashboard == null) throw new InvalidOperationException("Dashboard ikke forbundet.");
-        if (!command.EndsWith("\n")) command += "\n";
-
-        var bytes = Encoding.ASCII.GetBytes(command);
-        _streamDashboard.Write(bytes, 0, bytes.Length);
+        _ = SendDashboardAndReadLine(command);
     }
+
+    /// <summary>
+    /// Returns true if a program is currently running on the robot.
+    /// </summary>
+    public bool IsProgramRunning()
+    {
+        try
+        {
+            // Typical response: "Program running: true" / "Program running: false"
+            var resp = SendDashboardAndReadLine("running").Trim().ToLowerInvariant();
+            return resp.Contains("true");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // ---------------- URSCRIPT ----------------
 
     public void SendUrscript(string program)
     {
-        if (_streamUrscript == null) throw new InvalidOperationException("URScript ikke forbundet.");
-        if (!program.EndsWith("\n")) program += "\n";
+        if (_streamUrscript == null)
+            throw new InvalidOperationException("URScript ikke forbundet.");
 
+        if (!program.EndsWith("\n")) program += "\n";
         var bytes = Encoding.ASCII.GetBytes(program);
         _streamUrscript.Write(bytes, 0, bytes.Length);
     }
@@ -87,12 +113,13 @@ public sealed class Robot
         SendUrscript(program);
     }
 
-    // --- DIGITAL OUTPUT (til DI-stop-løsning) ---
+    /// <summary>
+    /// Secondary program: change IO without overwriting the main running program.
+    /// </summary>
     public void SetStandardDigitalOut(int index, bool value)
     {
         var v = value ? "True" : "False";
 
-        // Secondary program: ændrer IO uden at stoppe/overskrive kørende program
         var program =
             "sec io_set():\n" +
             $"  set_standard_digital_out({index}, {v})\n" +
@@ -101,83 +128,15 @@ public sealed class Robot
         SendUrscript(program);
     }
 
+    // ---------------- HARD STOP ----------------
 
-
-    // --- HÅRDT STOP (Dashboard) ---
     public void EmergencyStop()
     {
         if (!_clientDashboard.Connected) return;
-        SendDashboard("stop");
-        _ = _readerDashboard?.ReadLine(); // consume response if any
-    }
-
-    // --- Event listener (COUNT etc.) ---
-    public void StartEventListener(int port)
-    {
-        if (_listener != null) return;
-
-        _listenerCts = new CancellationTokenSource();
-        var token = _listenerCts.Token;
-
-        _listener = new TcpListener(IPAddress.Any, port);
-        _listener.Start();
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    var client = await _listener.AcceptTcpClientAsync(token);
-                    _ = Task.Run(() => HandleClient(client, token), token);
-                }
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                RobotEventReceived?.Invoke("LISTENER_ERROR: " + ex.Message);
-            }
-        }, token);
-    }
-
-    private void HandleClient(TcpClient client, CancellationToken token)
-    {
         try
         {
-            using (client)
-            using (var ns = client.GetStream())
-            using (var reader = new StreamReader(ns, Encoding.ASCII))
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    var line = reader.ReadLine();
-                    if (line == null) break;
-
-                    line = line.Trim();
-                    if (line.Length == 0) continue;
-
-                    RobotEventReceived?.Invoke(line);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            RobotEventReceived?.Invoke("CLIENT_ERROR: " + ex.Message);
-        }
-    }
-
-    public void StopEventListener()
-    {
-        try
-        {
-            _listenerCts?.Cancel();
-            _listener?.Stop();
+            _ = SendDashboardAndReadLine("stop");
         }
         catch { }
-        finally
-        {
-            _listener = null;
-            _listenerCts = null;
-        }
     }
 }
