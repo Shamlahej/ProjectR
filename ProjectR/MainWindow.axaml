@@ -110,7 +110,6 @@
 
   <Grid RowDefinitions="Auto,*,Auto">
 
-    <!-- Tabs -->
     <TabControl Name="TabControl" Grid.Row="0">
 
       <!-- LOGIN -->
@@ -133,13 +132,10 @@
               <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Title -->
             <StackPanel Grid.Row="0" Spacing="6" HorizontalAlignment="Center">
               <TextBlock Text="Sorting Robot Arm" FontSize="28" FontWeight="Bold"/>
-              <TextBlock Text="Standalone HMI (simulation)" FontSize="14" Opacity="0.7"/>
             </StackPanel>
 
-            <!-- Top bar -->
             <Border Grid.Row="1"
                     Name="TopBarCard"
                     Margin="0,18,0,0"
@@ -157,7 +153,6 @@
               </StackPanel>
             </Border>
 
-            <!-- Main -->
             <Border Grid.Row="2"
                     Name="MainCard"
                     Margin="0,20,0,0"
@@ -169,7 +164,6 @@
                     ColumnSpacing="22"
                     RowSpacing="18">
 
-                <!-- LEFT -->
                 <StackPanel Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Spacing="16">
                   <TextBlock Text="Control" FontSize="18" FontWeight="Bold"/>
 
@@ -190,7 +184,6 @@
                             Click="StopButton_OnClick"/>
                   </StackPanel>
 
-                  <!-- Clear Result (matcher ResetButton_OnClick i CS) -->
                   <Button Name="ResetButton"
                           Content="Clear Result"
                           Width="170"
@@ -216,7 +209,6 @@
                   </Border>
                 </StackPanel>
 
-                <!-- RIGHT TOP: Batch panel -->
                 <Border Name="BatchPanel"
                         Grid.Row="0" Grid.Column="1"
                         CornerRadius="12"
@@ -242,10 +234,7 @@
                               Click="RunBatchButton_OnClick"/>
                     </StackPanel>
 
-                    <!-- target cycles line (CS forventer den findes) -->
-                    <TextBlock Name="TargetCyclesText"
-                               Text=""
-                               Opacity="0.8"/>
+                    <TextBlock Name="TargetCyclesText" Text="" Opacity="0.8"/>
 
                     <Separator/>
 
@@ -257,7 +246,6 @@
                   </StackPanel>
                 </Border>
 
-                <!-- RIGHT BOTTOM: Status -->
                 <Border Name="StatusPanel"
                         Grid.Row="1" Grid.Column="1"
                         CornerRadius="12"
@@ -290,7 +278,6 @@
               </Grid>
             </Border>
 
-            <!-- Bottom log -->
             <Border Grid.Row="3"
                     Name="BottomCard"
                     Margin="0,18,0,0"
@@ -329,13 +316,17 @@
       <TabItem Header="🛢 Database" Name="DatabaseTab">
         <StackPanel Margin="12" Spacing="8">
           <Button Click="RecreateDatabaseButton_OnClick">Recreate database</Button>
-          <Button Click="ShowRunsButton_OnClick">Show runs</Button>
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Click="ShowRunsButton_OnClick">Show runs</Button>
+            <Button Click="ShowAllLoginsButton_OnClick">Show all logins</Button>
+            <Button Click="ShowEmergencyLogButton_OnClick">Emergency log</Button>
+          </StackPanel>
         </StackPanel>
       </TabItem>
 
     </TabControl>
 
-    <!-- Log output -->
     <Border Grid.Row="1"
             Background="{DynamicResource Card}"
             BorderBrush="{DynamicResource Border}"
@@ -351,7 +342,6 @@
       </ScrollViewer>
     </Border>
 
-    <!-- Bottom bar -->
     <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
       <Button Grid.Column="0" Click="ClearLogButton_OnClick">Clear</Button>
       <Button Grid.Column="1"

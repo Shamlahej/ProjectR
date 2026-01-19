@@ -276,31 +276,130 @@ public partial class MainWindow : Window
         }
     }
 
+    // ✅ FIX: Show runs skal kun vise batch runs (ikke emergency),
+    // og vise hvem + hvornår + batchCycles + security tider.
     public async void ShowRunsButton_OnClick(object? sender, RoutedEventArgs e)
     {
         try
         {
-            // Vis de nyeste 50 runs i log
-            var runs = await _db.SortingRuns
+            // Hent flere end 50 og filtrer bagefter, så du stadig får 50 batch-runs
+            var rows = await _db.SortingRuns
                 .OrderByDescending(r => r.EndedAt)
-                .Take(50)
+                .Take(500)
                 .ToListAsync();
 
-            Log("---- Latest runs ----");
-            if (runs.Count == 0)
+            // Filtrer: kun batch meta (og IKKE emergency)
+            var batchRuns = rows
+                .Where(r =>
+                    r.ItemsCounted != -1 &&
+                    TryParseBatchMeta(r.Username, out _, out _, out _, out _))
+                .Take(50)
+                .ToList();
+
+            Log("---- Latest batch runs ----");
+            if (batchRuns.Count == 0)
             {
-                Log("(no runs saved yet)");
+                Log("(no batch runs saved yet)");
+                Log("---------------------------");
+                return;
             }
-            else
+
+            foreach (var r in batchRuns)
             {
-                foreach (var r in runs)
-                    Log($"{r.EndedAt:yy-MM-dd HH:mm:ss} | ItemsCounted={r.ItemsCounted} | Username={r.Username}");
+                var endedLocal = r.EndedAt.ToLocalTime();
+
+                // Parse batch meta (vi ved den virker pga. filteret)
+                _ = TryParseBatchMeta(r.Username, out var who, out var batchCycles, out var secStartUtc, out var secEndUtc);
+
+                Log($"{endedLocal:yy-MM-dd HH:mm:ss} | Batch finished");
+                Log($"    User:         {who}");
+                Log($"    Batch cycles:  {batchCycles}");
+                Log($"    Security:      {secStartUtc:yyyy-MM-dd HH:mm:ss}Z  ->  {secEndUtc:yyyy-MM-dd HH:mm:ss}Z");
             }
-            Log("---------------------");
+
+            Log("---------------------------");
         }
         catch (Exception ex)
         {
             Log("Show runs error: " + ex.Message);
+        }
+    }
+
+    // ✅ FIX: matcher dit GEMTE format:
+    // "{user} | batchCycles=5 | securityStartUtc=... | securityEndUtc=..."
+    private static bool TryParseBatchMeta(
+        string? meta,
+        out string username,
+        out int batchCycles,
+        out DateTime secStartUtc,
+        out DateTime secEndUtc)
+    {
+        username = "unknown";
+        batchCycles = 0;
+        secStartUtc = default;
+        secEndUtc = default;
+
+        if (string.IsNullOrWhiteSpace(meta)) return false;
+
+        // Split på '|'
+        var parts = meta.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 4) return false;
+
+        // Første del er brugernavn
+        username = parts[0].Trim();
+
+        bool okCycles = false, okStart = false, okEnd = false;
+
+        foreach (var p in parts.Skip(1))
+        {
+            if (p.StartsWith("batchCycles=", StringComparison.OrdinalIgnoreCase))
+            {
+                okCycles = int.TryParse(p.Substring("batchCycles=".Length), out batchCycles);
+            }
+            else if (p.StartsWith("securityStartUtc=", StringComparison.OrdinalIgnoreCase))
+            {
+                okStart = DateTime.TryParse(
+                    p.Substring("securityStartUtc=".Length),
+                    null,
+                    System.Globalization.DateTimeStyles.RoundtripKind,
+                    out secStartUtc);
+            }
+            else if (p.StartsWith("securityEndUtc=", StringComparison.OrdinalIgnoreCase))
+            {
+                okEnd = DateTime.TryParse(
+                    p.Substring("securityEndUtc=".Length),
+                    null,
+                    System.Globalization.DateTimeStyles.RoundtripKind,
+                    out secEndUtc);
+            }
+        }
+
+        return okCycles && okStart && okEnd;
+    }
+
+    public async void ShowAllLoginsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var users = await _db.Accounts
+                .OrderBy(a => a.Username)
+                .ToListAsync();
+
+            Log("---- All logins ----");
+            if (users.Count == 0)
+            {
+                Log("(no users)");
+            }
+            else
+            {
+                foreach (var u in users)
+                    Log($"{u.Username,-18} | admin={(u.IsAdmin ? "YES" : "NO")}");
+            }
+            Log("--------------------");
+        }
+        catch (Exception ex)
+        {
+            Log("Show all logins error: " + ex.Message);
         }
     }
 
@@ -600,6 +699,74 @@ public partial class MainWindow : Window
         _statusHintText.Text = "System halted";
         SetResult("EMERGENCY STOP");
         SetTargetCyclesText("");
+
+        // ✅ Emergency log i DB: hvem + tid (UTC)
+        try
+        {
+            var who = _currentUsername ?? "unknown";
+            var pressedUtc = DateTime.UtcNow;
+
+            // Gem kun det vi skal bruge (rent og simpelt)
+            var meta = $"EMERGENCY| user={who} | pressedUtc={pressedUtc:O}";
+
+            _ = _dbService.SaveRunAsync(itemsCounted: -1, username: meta);
+
+            Log($"🚨 Emergency clicked by {who} (saved).");
+            RobotUiLog($"🚨 Emergency clicked by {who} (saved).");
+        }
+        catch (Exception ex)
+        {
+            Log("Emergency DB log error: " + ex.Message);
+        }
+    }
+
+    public async void ShowEmergencyLogButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var rows = await _db.SortingRuns
+                .Where(r => r.ItemsCounted == -1 && (r.Username ?? "").StartsWith("EMERGENCY|"))
+                .OrderByDescending(r => r.EndedAt)
+                .Take(200)
+                .ToListAsync();
+
+            Log("---- Emergency log ----");
+            if (rows.Count == 0)
+            {
+                Log("(no emergency clicks logged yet)");
+                Log("-----------------------");
+                return;
+            }
+
+            foreach (var r in rows)
+            {
+                // Vi bruger EndedAt som “tidspunktet i DB”
+                var localTime = r.EndedAt.ToLocalTime();
+                var who = TryParseEmergencyUser(r.Username) ?? "unknown";
+
+                Log($"{localTime:yy-MM-dd HH:mm:ss} | user={who}");
+            }
+
+            Log("-----------------------");
+        }
+        catch (Exception ex)
+        {
+            Log("Show emergency log error: " + ex.Message);
+        }
+    }
+
+    private static string? TryParseEmergencyUser(string? meta)
+    {
+        if (string.IsNullOrWhiteSpace(meta)) return null;
+
+        // meta: "EMERGENCY| user=xxx | pressedUtc=..."
+        var parts = meta.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        foreach (var p in parts)
+        {
+            if (p.StartsWith("user=", StringComparison.OrdinalIgnoreCase))
+                return p.Substring("user=".Length).Trim();
+        }
+        return null;
     }
 
     // ---------------- Conveyor manual toggle ----------------
