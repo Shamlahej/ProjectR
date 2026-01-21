@@ -1,3 +1,8 @@
+<!-- MainWindow.axaml er lavet både på Xaml.io, men også ved brug af login interface eksemplet fra undervisning -->
+<!-- Vi har startet med at bruge login interface og så har vi bygget videre på den med eget layout udarbejdet på xaml.io -->
+<!-- https://industrial-programming.aydos.de/security/system-login-interface-example.html-->
+<!-- https://xaml.io/-->
+
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ProjectR.MainWindow"
@@ -112,7 +117,7 @@
 
     <TabControl Name="TabControl" Grid.Row="0">
 
-      <!-- LOGIN -->
+      <!-- loginstart -->
       <TabItem Header="🔑 Login" Name="LoginTab">
         <StackPanel Margin="12" Spacing="8">
           <TextBox Name="LoginUsername" Watermark="username" Text="admin"/>
@@ -121,7 +126,7 @@
         </StackPanel>
       </TabItem>
 
-      <!-- ROBOT -->
+      <!-- robotfanen -->
       <TabItem Header="🦾 Robot" Name="RobotTab">
         <Border Name="RootBackground">
           <Grid Margin="24">
@@ -298,7 +303,7 @@
         </Border>
       </TabItem>
 
-      <!-- USERS -->
+      <!-- userfanen -->
       <TabItem Header="👥 Users" Name="UsersTab">
         <StackPanel Margin="12" Spacing="8">
           <TextBlock FontWeight="Bold" Text="Create User"/>
@@ -312,7 +317,7 @@
         </StackPanel>
       </TabItem>
 
-      <!-- DATABASE -->
+      <!-- Databasefanen -->
       <TabItem Header="🛢 Database" Name="DatabaseTab">
         <StackPanel Margin="12" Spacing="8">
           <Button Click="RecreateDatabaseButton_OnClick">Recreate database</Button>

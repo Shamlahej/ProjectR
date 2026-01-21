@@ -1,4 +1,8 @@
-﻿using Avalonia;
+﻿// Program.cs
+
+// Ingen ændringer i program.cs.
+// Her sikrer vi os at avalonia Ui ikke crasher, fordi nogle af funktionerne i programmet kan opføre sig mærkeligt. 
+using Avalonia;
 using System;
 
 namespace ProjectR;
